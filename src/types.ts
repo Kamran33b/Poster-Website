@@ -201,6 +201,8 @@ export interface SupportTicket {
 export interface StoreSettings {
   storeName: string;
   currency: string;
+  currencySymbol?: string;
+  currencyRate?: number;
   taxRate: number;
   shippingFlatRate: number;
   freeShippingThreshold: number;

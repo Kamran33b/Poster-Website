@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { GoogleGenAI } from '@google/genai';
 import { db } from './server/db';
 
 async function startServer() {
@@ -405,6 +406,118 @@ async function startServer() {
           : 'Payment authorized securely via encrypted gateway'
       });
     }, 600);
+  });
+
+  // AI Customer Support Chat Endpoint (Powered by Gemini API)
+  const STORE_SYSTEM_INSTRUCTION = `You are Lumina AI, the friendly, articulate, and highly knowledgeable AI customer support specialist for Lumina Art Posters (a premium e-commerce store specializing in museum-grade physical art prints, gallery framing, and custom sizes).
+
+Here is the exact information about Lumina Art Posters to answer customer questions accurately:
+
+1. SHIPPING & DELIVERY:
+- Dispatch: All poster prints and framed artworks are printed on demand and dispatched within 1-2 business days.
+- Standard Shipping: Takes 3-5 business days. Flat rate of $8.95 (FREE on orders over $100).
+- Express Shipping: Takes 1-2 business days for $18.00.
+- International Shipping: Available worldwide with full courier tracking (5-10 business days).
+- Packaging: Unframed prints ship in heavy-duty reinforced craft tubes. Framed art prints are securely encased in corner protectors and heavy-duty double-walled protective flat boxes with zero plastic packaging.
+- Order Tracking: Tracking numbers are sent automatically via email and SMS as soon as the order is handed to courier (FedEx / UPS / DHL).
+
+2. FRAMING OPTIONS & MATERIALS:
+- Frames Available: 
+  * Solid Natural Oak: Handcrafted real oak hardwood with warm grain finish.
+  * Matte Black Aluminum: Gallery-grade anodized sleek metal frame.
+  * Pure White Wood: Modern painted solid hardwood frame.
+- Glass & Glazing: High-clarity optical museum-grade cast acrylic. It is shatter-resistant, lightweight, and filters out 92% of UV rays to prevent fading over time.
+- Sizes:
+  * A4: 21 x 30 cm / 8.3 x 11.7 in (Ideal for gallery walls & small desks)
+  * A3: 30 x 42 cm / 11.7 x 16.5 in (Popular medium accent size)
+  * A2: 42 x 60 cm / 16.5 x 23.4 in (Standard statement art size)
+  * A1: 60 x 84 cm / 23.4 x 33.1 in (Large feature focal piece)
+- Custom Sizing: Custom print sizes and bespoke frame options are available upon request via our Support page.
+
+3. PRINT QUALITY & PAPER:
+- Paper Stock: 250 GSM heavy archival giclée matte paper with a smooth non-glare velvet surface.
+- Inks: 12-color archival pigment-based giclée inks with a 100+ year fade-resistance guarantee.
+- Sustainability: Paper is 100% FSC-certified from sustainably managed forests.
+
+4. RETURNS & REPLACEMENTS:
+- 30-day money-back guarantee for unused items.
+- Free instant replacement if a print or frame arrives damaged in transit—customers can submit a ticket on our Support page.
+
+5. TONE & FORMATTING:
+- Be warm, helpful, polite, concise, and articulate.
+- Use clean formatting (bullet points, bold text) when listing specs.
+- Keep answers under 150 words unless detailed information is explicitly requested.
+- If a customer needs personalized order-specific help, invite them to submit a ticket on our Support page.`;
+
+  let aiClientInstance: GoogleGenAI | null = null;
+  function getGeminiClient(): GoogleGenAI | null {
+    if (aiClientInstance) return aiClientInstance;
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
+    aiClientInstance = new GoogleGenAI({ apiKey: key });
+    return aiClientInstance;
+  }
+
+  app.post('/api/ai-chat', async (req, res) => {
+    try {
+      const { message, history } = req.body;
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      const ai = getGeminiClient();
+      if (ai) {
+        const formattedHistory = Array.isArray(history)
+          ? history.slice(-6).map((h: { role: string; text: string }) => ({
+              role: h.role === 'user' ? 'user' : 'model',
+              parts: [{ text: h.text }]
+            }))
+          : [];
+
+        formattedHistory.push({
+          role: 'user',
+          parts: [{ text: message }]
+        });
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: formattedHistory,
+          config: {
+            systemInstruction: STORE_SYSTEM_INSTRUCTION,
+            temperature: 0.7,
+          }
+        });
+
+        const text = response.text || "I'm happy to help! Let me know if you have any questions about our shipping times, frame materials, or archival paper options.";
+        return res.json({ reply: text });
+      } else {
+        // Intelligent fallback if GEMINI_API_KEY is not set
+        const q = message.toLowerCase();
+        let reply = "I'm Lumina AI Assistant!";
+        if (q.includes('ship') || q.includes('delivery') || q.includes('track') || q.includes('arrive')) {
+          reply = "🚚 **Shipping & Delivery Info:**\n• Orders dispatch within 1–2 business days.\n• Standard Shipping: 3–5 business days ($8.95 or FREE over $100).\n• Express Shipping: 1–2 business days ($18.00).\n• All orders ship in protective tubes or flat double-walled boxes with full tracking.";
+        } else if (q.includes('frame') || q.includes('glass') || q.includes('wood') || q.includes('oak') || q.includes('size')) {
+          reply = "🖼️ **Framing Options & Sizes:**\n• Frame Choices: Solid Natural Oak, Gallery Matte Black Aluminum, or Pure White Wood.\n• Glass: 92% UV-blocking, shatter-resistant optical museum acrylic.\n• Available Sizes: A4 (8x12 in), A3 (12x16 in), A2 (16x24 in), and A1 (24x33 in).";
+        } else if (q.includes('paper') || q.includes('print') || q.includes('quality') || q.includes('ink') || q.includes('material')) {
+          reply = "🎨 **Print Materials & Quality:**\n• 250 GSM heavy archival giclée matte paper.\n• 12-color archival pigment inks with 100+ year fade resistance.\n• FSC-certified sustainable wood fiber.";
+        } else if (q.includes('return') || q.includes('refund') || q.includes('damage')) {
+          reply = "📦 **Returns & Replacements:**\n• 30-day money-back guarantee.\n• Free instant replacement for items damaged during transit via our Support page ticket system!";
+        } else {
+          reply = "Hello! I'm Lumina AI. I can answer any questions about our **shipping times**, **gallery framing materials**, **archival print quality**, and **sizes**. What would you like to know?";
+        }
+        return res.json({ reply });
+      }
+    } catch (err) {
+      console.error('AI Chat Endpoint error:', err);
+      const q = (req.body.message || '').toLowerCase();
+      let reply = "I'm Lumina AI! Our art prints are printed on 250 GSM archival giclée paper with optional museum-grade oak, black aluminum, or white wood frames. Standard shipping takes 3-5 days (free over $100).";
+      if (q.includes('ship') || q.includes('delivery')) {
+        reply = "🚚 Standard shipping takes 3-5 business days ($8.95 or free over $100). Orders dispatch in 1-2 days with FedEx/UPS/DHL tracking.";
+      } else if (q.includes('frame') || q.includes('size')) {
+        reply = "🖼️ We offer Solid Natural Oak, Matte Black Aluminum, and Pure White Wood frames in A4, A3, A2, and A1 sizes with 92% UV protection acrylic glass.";
+      }
+      return res.json({ reply });
+    }
   });
 
   // Vite middleware for development

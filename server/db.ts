@@ -63,9 +63,10 @@ const INITIAL_CATEGORIES: Category[] = [
 ];
 
 const STANDARD_SIZES = [
-  { id: 's-30x40', name: 'Small', dimensions: '30 × 40 cm (12 × 16″)', priceMultiplier: 1.0, inStock: true },
-  { id: 's-50x70', name: 'Medium (Most Popular)', dimensions: '50 × 70 cm (20 × 28″)', priceMultiplier: 1.45, inStock: true },
-  { id: 's-70x100', name: 'Gallery Statement', dimensions: '70 × 100 cm (28 × 40″)', priceMultiplier: 1.95, inStock: true }
+  { id: 's-a4', name: 'A4 Size', dimensions: '21 × 30 cm (8.3 × 11.7″)', priceMultiplier: 1.0, inStock: true },
+  { id: 's-a3', name: 'A3 Size (Popular)', dimensions: '30 × 42 cm (11.7 × 16.5″)', priceMultiplier: 1.25, inStock: true },
+  { id: 's-a2', name: 'A2 Size (Feature)', dimensions: '42 × 60 cm (16.5 × 23.4″)', priceMultiplier: 1.55, inStock: true },
+  { id: 's-a1', name: 'A1 Size (Gallery)', dimensions: '60 × 84 cm (23.4 × 33.1″)', priceMultiplier: 1.95, inStock: true }
 ];
 
 const STANDARD_FRAMES = [

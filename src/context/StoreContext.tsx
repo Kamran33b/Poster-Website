@@ -851,17 +851,42 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return res.json();
   };
 
-  const [settings, setSettings] = useState<StoreSettings>({
-    storeName: 'LUMINA Fine Art Posters',
-    currency: '$',
-    taxRate: 7.0,
-    shippingFlatRate: 5.99,
-    freeShippingThreshold: 75.0
+  const [settings, setSettings] = useState<StoreSettings>(() => {
+    try {
+      const saved = localStorage.getItem('lumina_store_settings');
+      return saved ? JSON.parse(saved) : {
+        storeName: 'LUMINA Fine Art Posters',
+        currency: 'USD',
+        currencySymbol: '$',
+        currencyRate: 1.0,
+        taxRate: 7.0,
+        shippingFlatRate: 5.99,
+        freeShippingThreshold: 75.0
+      };
+    } catch {
+      return {
+        storeName: 'LUMINA Fine Art Posters',
+        currency: 'USD',
+        currencySymbol: '$',
+        currencyRate: 1.0,
+        taxRate: 7.0,
+        shippingFlatRate: 5.99,
+        freeShippingThreshold: 75.0
+      };
+    }
   });
 
   const updateSettings = (updates: Partial<StoreSettings>) => {
-    setSettings((prev) => ({ ...prev, ...updates }));
-    showToast('Store settings updated.');
+    setSettings((prev) => {
+      const next = { ...prev, ...updates };
+      try {
+        localStorage.setItem('lumina_store_settings', JSON.stringify(next));
+      } catch (e) {
+        console.warn(e);
+      }
+      return next;
+    });
+    showToast('Store currency & settings updated.');
   };
 
   const deleteCategory = async (id: string): Promise<boolean> => {

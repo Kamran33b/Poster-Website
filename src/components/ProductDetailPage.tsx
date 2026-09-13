@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { 
@@ -13,6 +13,7 @@ import {
   Eye, 
   Maximize2,
   ChevronLeft,
+  ChevronDown,
   Share2,
   Send
 } from 'lucide-react';
@@ -37,12 +38,21 @@ export const ProductDetailPage: React.FC = () => {
   // Selected configurations
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<PosterSize>(product?.sizes[0] || {
-    id: 's-30x40',
-    name: 'Small',
-    dimensions: '30 × 40 cm (12 × 16″)',
+    id: 's-a4',
+    name: 'A4 Size',
+    dimensions: '21 × 30 cm (8.3 × 11.7″)',
     priceMultiplier: 1.0,
     inStock: true
   });
+
+  // Sync selected size if product changes
+  useEffect(() => {
+    if (product?.sizes && product.sizes.length > 0) {
+      if (!product.sizes.some((s) => s.id === selectedSize.id)) {
+        setSelectedSize(product.sizes[0]);
+      }
+    }
+  }, [product]);
   const [selectedFrame, setSelectedFrame] = useState<FrameOption>(product?.frameOptions[0] || {
     id: 'f-none',
     name: 'Print Only (Unframed)',
@@ -382,34 +392,72 @@ export const ProductDetailPage: React.FC = () => {
               {product.description}
             </p>
 
-            {/* 1. Size Selection */}
-            <div className="space-y-2.5">
+            {/* 1. Size Selection Dropdown with Dynamic Price Calculation */}
+            <div className="space-y-3 p-4 bg-white rounded-2xl border border-stone-200 shadow-sm">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold uppercase tracking-wider text-stone-800">
-                  1. Select Poster Size
-                </span>
-                <span className="text-stone-500 font-medium">
+                <label htmlFor="product-size-select" className="font-bold uppercase tracking-wider text-stone-900 flex items-center gap-1.5 cursor-pointer">
+                  <span>1. Select Poster Size</span>
+                  <span className="text-[10px] bg-amber-100 text-amber-900 font-semibold px-2 py-0.5 rounded-full font-mono">
+                    {selectedSize.name}
+                  </span>
+                </label>
+                <span className="text-stone-500 font-mono text-[11px]">
                   {selectedSize.dimensions}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {/* Main Size Dropdown (<select>) */}
+              <div className="relative">
+                <select
+                  id="product-size-select"
+                  value={selectedSize.id}
+                  onChange={(e) => {
+                    const found = product.sizes.find((s) => s.id === e.target.value);
+                    if (found) setSelectedSize(found);
+                  }}
+                  className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-stone-900 appearance-none focus:outline-none focus:ring-2 focus:ring-stone-950 focus:bg-white transition-all cursor-pointer pr-10 shadow-2xs"
+                >
+                  {product.sizes.map((sz) => {
+                    const szUnitPrice = parseFloat((basePrice * sz.priceMultiplier + selectedFrame.price).toFixed(2));
+                    const isCurrent = sz.id === selectedSize.id;
+                    const diff = (szUnitPrice - calculatedUnitPrice).toFixed(2);
+                    const diffText = isCurrent 
+                      ? ' (Selected)' 
+                      : parseFloat(diff) > 0 
+                        ? ` (+$${diff})` 
+                        : ` (-$${Math.abs(parseFloat(diff)).toFixed(2)})`;
+
+                    return (
+                      <option key={sz.id} value={sz.id} className="py-1">
+                        {sz.name} — {sz.dimensions} | ${szUnitPrice.toFixed(2)}{diffText}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-stone-600">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+
+              {/* Quick Select Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                 {product.sizes.map((sz) => {
                   const isSelected = selectedSize.id === sz.id;
+                  const szUnitPrice = parseFloat((basePrice * sz.priceMultiplier + selectedFrame.price).toFixed(2));
                   return (
                     <button
                       key={sz.id}
                       type="button"
                       onClick={() => setSelectedSize(sz)}
-                      className={`p-3 rounded-xl text-left border transition-all ${
+                      className={`p-2 rounded-xl text-center border transition-all ${
                         isSelected
                           ? 'border-stone-950 bg-stone-950 text-white shadow-md'
-                          : 'border-stone-200 bg-white hover:border-stone-400 text-stone-800'
+                          : 'border-stone-200 bg-stone-50 hover:bg-white hover:border-stone-300 text-stone-800'
                       }`}
                     >
-                      <div className="font-serif text-xs font-bold">{sz.name}</div>
-                      <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
-                        {sz.dimensions.split('(')[0]}
+                      <div className="font-serif text-xs font-bold truncate">{sz.name}</div>
+                      <div className={`text-[10px] mt-0.5 font-mono ${isSelected ? 'text-amber-300' : 'text-stone-500'}`}>
+                        ${szUnitPrice.toFixed(2)}
                       </div>
                     </button>
                   );

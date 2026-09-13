@@ -22,6 +22,7 @@ import { OrderConfirmationModal } from './components/OrderConfirmationModal';
 import { AccountModal } from './components/AccountModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AdminAuthModal } from './components/AdminAuthModal';
+import { AIChatBubble } from './components/AIChatBubble';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -78,6 +79,9 @@ const AppContent: React.FC = () => {
 
       {/* Global Slide-Over Cart Drawer */}
       <CartDrawer />
+
+      {/* AI Customer Support Chat Bubble */}
+      <AIChatBubble />
 
       {/* Admin Password & OTP Auth Modal - Placed above every layer and centered */}
       <AdminAuthModal

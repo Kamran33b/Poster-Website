@@ -33,6 +33,19 @@ import {
 } from 'lucide-react';
 import { Product, Order, OrderStatus, Category, Coupon, Review, StoreSettings } from '../types';
 
+const CURRENCY_OPTIONS = [
+  { code: 'USD', symbol: '$', name: 'US Dollar (USD)', rate: 1.0, flag: '🇺🇸' },
+  { code: 'EUR', symbol: '€', name: 'Euro (EUR)', rate: 0.92, flag: '🇪🇺' },
+  { code: 'GBP', symbol: '£', name: 'British Pound (GBP)', rate: 0.79, flag: '🇬🇧' },
+  { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar (CAD)', rate: 1.36, flag: '🇨🇦' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar (AUD)', rate: 1.52, flag: '🇦🇺' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen (JPY)', rate: 155.0, flag: '🇯🇵' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee (INR)', rate: 83.5, flag: '🇮🇳' },
+  { code: 'CHF', symbol: 'CHF ', name: 'Swiss Franc (CHF)', rate: 0.89, flag: '🇨🇭' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar (SGD)', rate: 1.35, flag: '🇸🇬' },
+  { code: 'AED', symbol: 'AED ', name: 'UAE Dirham (AED)', rate: 3.67, flag: '🇦🇪' }
+];
+
 export const AdminDashboard: React.FC = () => {
   const {
     products,
@@ -502,7 +515,35 @@ export const AdminDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                    {/* Manual Currency Selector for Posters */}
+                    <div className="flex items-center gap-1.5 bg-stone-100 p-1.5 rounded-xl border border-stone-300">
+                      <span className="text-[10px] uppercase font-bold text-stone-600 pl-1">Currency:</span>
+                      <select
+                        id="admin-poster-currency-quick-select"
+                        value={settings.currency || 'USD'}
+                        onChange={(e) => {
+                          const selected = CURRENCY_OPTIONS.find((c) => c.code === e.target.value);
+                          if (selected) {
+                            updateSettings({
+                              currency: selected.code,
+                              currencySymbol: selected.symbol,
+                              currencyRate: selected.rate
+                            });
+                          } else {
+                            updateSettings({ currency: e.target.value });
+                          }
+                        }}
+                        className="bg-white text-stone-900 border border-stone-300 rounded-lg px-2 py-1 text-xs font-bold font-mono focus:outline-none focus:ring-1 focus:ring-stone-900 cursor-pointer"
+                      >
+                        {CURRENCY_OPTIONS.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.flag} {c.code} ({c.symbol})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <button
                       id="admin-bulk-price-btn"
                       type="button"
@@ -964,32 +1005,142 @@ export const AdminDashboard: React.FC = () => {
 
             {/* 7. SETTINGS TAB */}
             {activeTab === 'settings' && (
-              <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-6 max-w-xl text-xs">
-                <h3 className="font-serif text-lg font-semibold text-stone-950 pb-2 border-b border-stone-100">
-                  Store Operations & Shipping Configuration
-                </h3>
-
-                <div className="space-y-4">
+              <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-6 max-w-2xl text-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-stone-100">
                   <div>
-                    <label className="block text-stone-700 font-medium mb-1">Store Name</label>
+                    <h3 className="font-serif text-lg font-semibold text-stone-950">
+                      Store Operations & Poster Currency Configuration
+                    </h3>
+                    <p className="text-[11px] text-stone-500">
+                      Manage poster currency, tax rates, shipping policies, and admin security settings
+                    </p>
+                  </div>
+                  <span className="bg-amber-100 text-amber-900 text-[10px] font-bold font-mono px-2.5 py-1 rounded-full uppercase">
+                    Active: {settings.currency || 'USD'} ({settings.currencySymbol || '$'})
+                  </span>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-stone-700 font-medium mb-1">Store Brand Name</label>
                     <input
                       type="text"
                       defaultValue={settings.storeName}
                       onChange={(e) => updateSettings({ storeName: e.target.value })}
-                      className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900"
+                      className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-serif font-bold text-stone-900"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-stone-700 font-medium mb-1">Currency Symbol</label>
-                      <input
-                        type="text"
-                        defaultValue={settings.currency}
-                        onChange={(e) => updateSettings({ currency: e.target.value })}
-                        className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
-                      />
+                  {/* Manual Poster Currency Selector Card */}
+                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold uppercase tracking-wider text-stone-900 flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-amber-700" />
+                        <span>Manual Poster Currency Selector</span>
+                      </span>
+                      <span className="text-[10px] text-stone-500 font-mono">
+                        Exchange Rate Multiplier: {settings.currencyRate || 1.0}x
+                      </span>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-stone-700 font-medium mb-1">Select Currency</label>
+                        <select
+                          id="admin-setting-currency-select"
+                          value={settings.currency || 'USD'}
+                          onChange={(e) => {
+                            const selected = CURRENCY_OPTIONS.find((c) => c.code === e.target.value);
+                            if (selected) {
+                              updateSettings({
+                                currency: selected.code,
+                                currencySymbol: selected.symbol,
+                                currencyRate: selected.rate
+                              });
+                            } else {
+                              updateSettings({ currency: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 bg-white border border-stone-300 rounded-lg font-bold font-mono focus:outline-none focus:border-stone-900"
+                        >
+                          {CURRENCY_OPTIONS.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.flag} {c.code} — {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-stone-700 font-medium mb-1">Currency Symbol</label>
+                        <input
+                          type="text"
+                          value={settings.currencySymbol || '$'}
+                          onChange={(e) => updateSettings({ currencySymbol: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-stone-300 rounded-lg font-mono font-bold text-center focus:outline-none focus:border-stone-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-stone-700 font-medium mb-1">Price Rate Multiplier</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={settings.currencyRate || 1.0}
+                          onChange={(e) => updateSettings({ currencyRate: parseFloat(e.target.value) || 1.0 })}
+                          className="w-full p-2.5 bg-white border border-stone-300 rounded-lg font-mono text-center focus:outline-none focus:border-stone-900"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div>
+                      <span className="text-[11px] text-stone-500 block mb-1.5 font-medium">Quick Currency Presets:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CURRENCY_OPTIONS.map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            onClick={() => updateSettings({
+                              currency: c.code,
+                              currencySymbol: c.symbol,
+                              currencyRate: c.rate
+                            })}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all ${
+                              settings.currency === c.code
+                                ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                                : 'bg-white hover:bg-stone-100 text-stone-800 border-stone-300'
+                            }`}
+                          >
+                            <span>{c.flag}</span>
+                            <span>{c.code} ({c.symbol})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Live Preview Box */}
+                    <div className="p-3 bg-white rounded-xl border border-stone-200/90 text-[11px] text-stone-600 space-y-1">
+                      <div className="font-semibold text-stone-900 flex justify-between">
+                        <span>Poster Live Pricing Preview:</span>
+                        <span className="font-mono text-emerald-800">{settings.currency || 'USD'} Active</span>
+                      </div>
+                      <div className="flex justify-between font-mono">
+                        <span>Base Poster ($28.00):</span>
+                        <span className="font-bold text-stone-950">
+                          {settings.currencySymbol || '$'}{(28 * (settings.currencyRate || 1.0)).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-mono">
+                        <span>Solid Oak Frame (+$34.00):</span>
+                        <span className="font-bold text-stone-950">
+                          {settings.currencySymbol || '$'}{(34 * (settings.currencyRate || 1.0)).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-stone-700 font-medium mb-1">Standard Tax Rate (%)</label>
                       <input
@@ -999,11 +1150,8 @@ export const AdminDashboard: React.FC = () => {
                         className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-stone-700 font-medium mb-1">Standard Shipping ($)</label>
+                      <label className="block text-stone-700 font-medium mb-1">Standard Shipping ({settings.currencySymbol || '$'})</label>
                       <input
                         type="number"
                         defaultValue={settings.shippingFlatRate}
@@ -1011,21 +1159,22 @@ export const AdminDashboard: React.FC = () => {
                         className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
                       />
                     </div>
-                    <div>
-                      <label className="block text-stone-700 font-medium mb-1">Free Shipping Threshold ($)</label>
-                      <input
-                        type="number"
-                        defaultValue={settings.freeShippingThreshold}
-                        onChange={(e) => updateSettings({ freeShippingThreshold: parseFloat(e.target.value) })}
-                        className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
-                      />
-                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-stone-700 font-medium mb-1">Free Shipping Threshold ({settings.currencySymbol || '$'})</label>
+                    <input
+                      type="number"
+                      defaultValue={settings.freeShippingThreshold}
+                      onChange={(e) => updateSettings({ freeShippingThreshold: parseFloat(e.target.value) })}
+                      className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
+                    />
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => showToast('Store settings saved successfully.')}
-                    className="px-6 py-2.5 bg-stone-950 hover:bg-stone-800 text-white rounded-xl font-semibold"
+                    onClick={() => showToast('Store currency and settings saved successfully.')}
+                    className="px-6 py-2.5 bg-stone-950 hover:bg-stone-800 text-white rounded-xl font-semibold shadow-sm transition-colors cursor-pointer"
                   >
                     Save Store Settings
                   </button>
