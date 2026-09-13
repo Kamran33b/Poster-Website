@@ -63,6 +63,8 @@ export interface CartItem {
 }
 
 export interface ShippingAddress {
+  id?: string;
+  label?: string; // e.g. "Home", "Work / Studio", "Gallery Office"
   fullName: string;
   email: string;
   phone: string;
@@ -115,8 +117,13 @@ export interface Order {
   shippingCarrier?: string;
   trackingNumber?: string;
   estimatedDelivery?: string;
-  paymentMethod: 'Credit / Debit Card' | 'Apple Pay' | 'PayPal';
-  paymentStatus: 'Paid' | 'Processing' | 'Failed';
+  paymentMethod: 'Credit / Debit Card' | 'Apple Pay' | 'PayPal' | 'UPI';
+  upiId?: string;
+  upiTransactionRef?: string;
+  paymentStatus: 'Paid' | 'Processing' | 'Failed' | 'Refunded';
+  cancelReason?: string;
+  cancelledBy?: 'Customer' | 'Admin';
+  cancelledAt?: string;
   timeline: Array<{
     status: OrderStatus;
     timestamp: string;
@@ -168,10 +175,36 @@ export interface AdminStats {
   categoryDistribution: Array<{ category: string; count: number; sales: number }>;
 }
 
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  name: string;
+  email: string;
+  phone?: string;
+  orderNumber?: string;
+  category: 'Order Status & Tracking' | 'Damaged / Replacement Print' | 'Custom Framing & Sizing' | 'Returns & Refunds' | 'General Inquiry';
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  subject: string;
+  message: string;
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  createdAt: string;
+  updatedAt: string;
+  responses?: Array<{
+    id: string;
+    sender: 'Customer' | 'Support Agent';
+    senderName: string;
+    message: string;
+    timestamp: string;
+  }>;
+}
+
 export interface StoreSettings {
   storeName: string;
   currency: string;
   taxRate: number;
   shippingFlatRate: number;
   freeShippingThreshold: number;
+  supportEmail?: string;
+  supportPhone?: string;
+  supportHours?: string;
 }

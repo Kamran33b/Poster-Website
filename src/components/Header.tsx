@@ -76,19 +76,21 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-[#faf8f5]/95 backdrop-blur-md border-b border-stone-200 transition-all">
-      {/* Top Banner */}
-      <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-3">
-        <span className="flex items-center gap-1.5 text-stone-200">
-          <Tag className="w-3.5 h-3.5 text-amber-400" />
-          Autumn Collector Drop: Use code <strong className="text-amber-300 tracking-wider">POSTER15</strong> for 15% off
-        </span>
-        <span className="hidden md:inline text-stone-500">•</span>
-        <span className="hidden md:inline text-stone-400">Archival 200gsm Museum Paper & Custom Hand-Joined Frames</span>
-        <span className="hidden lg:inline text-stone-500">•</span>
-        <span className="hidden lg:inline-flex items-center gap-1 text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Real-Time Sync {realtimeStatus === 'connected' ? 'Active' : 'Connecting'}
-        </span>
+      {/* Top Banner with smooth left-to-right loop animation */}
+      <div className="bg-stone-900 text-stone-300 text-xs py-1.5 overflow-hidden relative w-full border-b border-stone-800">
+        <div className="animate-banner-scroll items-center gap-4 text-xs font-medium tracking-wide">
+          <span className="flex items-center gap-1.5 text-stone-200">
+            <Tag className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            Autumn Collector Drop: Use code <strong className="text-amber-300 tracking-wider ml-1 mr-1">POSTER15</strong> for 15% off
+          </span>
+          <span className="text-stone-500">•</span>
+          <span className="text-stone-400">Archival 200gsm Museum Paper & Custom Hand-Joined Frames</span>
+          <span className="text-stone-500">•</span>
+          <span className="inline-flex items-center gap-1.5 text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+            Real-Time Sync {realtimeStatus === 'connected' ? 'Active' : 'Connecting'}
+          </span>
+        </div>
       </div>
 
       {/* Main Nav Bar */}

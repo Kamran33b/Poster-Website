@@ -193,6 +193,15 @@ async function startServer() {
     res.json(updated);
   });
 
+  app.post('/api/orders/:id/cancel', (req, res) => {
+    const { reason, cancelledBy } = req.body;
+    const updated = db.cancelOrder(req.params.id, reason, cancelledBy);
+    if (!updated) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    res.json(updated);
+  });
+
   // Coupons API
   app.get('/api/coupons', (req, res) => {
     res.json(db.getCoupons());
@@ -243,6 +252,58 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Support Tickets API
+  app.get('/api/support/tickets', (req, res) => {
+    res.json(db.getSupportTickets());
+  });
+
+  app.post('/api/support/tickets', (req, res) => {
+    const { name, email, subject, message, category, priority, orderNumber, phone } = req.body;
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ error: 'Name, email, subject, and message are required.' });
+    }
+    const ticket = db.createSupportTicket({
+      name: name.trim(),
+      email: email.trim(),
+      subject: subject.trim(),
+      message: message.trim(),
+      category: category || 'General Inquiry',
+      priority: priority || 'Medium',
+      orderNumber: orderNumber ? orderNumber.trim() : undefined,
+      phone: phone ? phone.trim() : undefined
+    });
+    res.status(201).json(ticket);
+  });
+
+  app.post('/api/support/tickets/:id/reply', (req, res) => {
+    const { sender, senderName, message } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message content is required.' });
+    }
+    const updated = db.addTicketResponse(
+      req.params.id,
+      sender || 'Support Agent',
+      senderName || 'Support Specialist',
+      message.trim()
+    );
+    if (!updated) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    res.json(updated);
+  });
+
+  app.patch('/api/support/tickets/:id/status', (req, res) => {
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+    const updated = db.updateTicketStatus(req.params.id, status);
+    if (!updated) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    res.json(updated);
+  });
+
   // Admin Stats
   app.get('/api/admin/stats', (req, res) => {
     res.json(db.getAdminStats());
@@ -291,14 +352,10 @@ async function startServer() {
     if (!phone || !otp) {
       return res.status(400).json({ success: false, message: 'Phone number and OTP code are required' });
     }
-    const isValid = db.verifyOtp(phone, otp);
+    const isValid = db.verifyAndConsumeOtp(phone, otp);
     if (!isValid) {
       return res.status(400).json({ success: false, message: 'Invalid or expired WhatsApp OTP code' });
     }
-    // Clear active OTP once verified
-    const auth = db.getAdminAuth();
-    auth.activeOtp = null;
-    db.saveData(db['data']);
     res.json({ success: true, message: 'OTP verified successfully! Access granted.' });
   });
 
@@ -323,19 +380,29 @@ async function startServer() {
     res.json({ success: true, message: 'Recovery phone updated successfully' });
   });
 
-  // Simulated payment gateway verification endpoint
+  // Simulated payment gateway verification endpoint (Cards, UPI, Apple Pay, PayPal)
   app.post('/api/checkout/process-payment', (req, res) => {
-    const { paymentMethod, amount, cardLast4 } = req.body;
-    // Simulate secure PCI-DSS tokenized authorization
+    const { paymentMethod, amount, cardLast4, upiId, upiApp } = req.body;
+    // Simulate secure PCI-DSS / NPCI tokenized authorization
     setTimeout(() => {
+      const isUpi = paymentMethod === 'UPI';
+      const upiRefNumber = isUpi ? `UPI${Date.now().toString().slice(-8)}${Math.floor(1000 + Math.random() * 9000)}` : undefined;
+
       res.json({
         success: true,
-        transactionId: `txn_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        transactionId: isUpi 
+          ? `upi_txn_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+          : `txn_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         status: 'authorized',
         amount,
         paymentMethod,
-        cardLast4: cardLast4 || '4242',
-        message: 'Payment authorized securely via encrypted gateway'
+        cardLast4: isUpi ? undefined : (cardLast4 || '4242'),
+        upiId: isUpi ? (upiId || 'collector@upi') : undefined,
+        upiApp: isUpi ? (upiApp || 'BHIM UPI') : undefined,
+        upiRefNumber,
+        message: isUpi
+          ? `UPI payment authorized via ${upiApp || 'UPI'} (${upiId || 'collector@upi'})`
+          : 'Payment authorized securely via encrypted gateway'
       });
     }, 600);
   });

@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, Category, CartItem, Order, Coupon, Review, UserAccount, ShippingAddress, PosterSize, FrameOption, StoreSettings } from '../types';
+import { Product, Category, CartItem, Order, Coupon, Review, UserAccount, ShippingAddress, PosterSize, FrameOption, StoreSettings, SupportTicket } from '../types';
 
 interface StoreContextType {
   // Navigation & View state
-  currentView: 'home' | 'shop' | 'product-detail' | 'cart' | 'checkout' | 'account' | 'order-confirmation' | 'admin';
-  setCurrentView: (view: 'home' | 'shop' | 'product-detail' | 'cart' | 'checkout' | 'account' | 'order-confirmation' | 'admin') => void;
+  currentView: 'home' | 'shop' | 'product-detail' | 'cart' | 'checkout' | 'account' | 'order-confirmation' | 'contact' | 'admin';
+  setCurrentView: (view: 'home' | 'shop' | 'product-detail' | 'cart' | 'checkout' | 'account' | 'order-confirmation' | 'contact' | 'admin') => void;
   selectedProductId: string | null;
   setSelectedProductId: (id: string | null) => void;
   selectedCategory: string;
@@ -20,6 +20,7 @@ interface StoreContextType {
   orders: Order[];
   coupons: Coupon[];
   reviews: Review[];
+  supportTickets: SupportTicket[];
   isLoading: boolean;
   realtimeStatus: 'connected' | 'reconnecting' | 'disconnected';
   lastRealtimeEvent: string | null;
@@ -48,11 +49,15 @@ interface StoreContextType {
 
   // User & Account
   user: UserAccount | null;
+  savedAddresses: ShippingAddress[];
   loginUser: (email: string, name?: string) => void;
   logoutUser: () => void;
   updateUserProfile: (profile: Partial<UserAccount>) => void;
   addAddress: (address: ShippingAddress) => void;
-  deleteAddress: (index: number) => void;
+  saveAddress: (address: ShippingAddress) => void;
+  updateAddress: (address: ShippingAddress) => void;
+  deleteAddress: (indexOrId: number | string) => void;
+  setDefaultAddress: (indexOrId: number | string) => void;
 
   // Checkout & Orders
   currentOrder: Order | null;
@@ -66,6 +71,12 @@ interface StoreContextType {
   refreshOrders: () => Promise<void>;
   refreshReviews: () => Promise<void>;
   refreshCoupons: () => Promise<void>;
+  refreshSupportTickets: () => Promise<void>;
+
+  // Customer Support
+  submitSupportTicket: (ticketData: any) => Promise<SupportTicket>;
+  replySupportTicket: (ticketId: string, sender: 'Customer' | 'Support Agent', senderName: string, message: string) => Promise<SupportTicket>;
+  updateSupportTicketStatus: (ticketId: string, status: SupportTicket['status']) => Promise<SupportTicket>;
 
   // Admin Actions & Store Settings
   settings: StoreSettings;
@@ -76,6 +87,7 @@ interface StoreContextType {
   bulkUpdatePrices: (action: 'set_all' | 'adjust_percent' | 'adjust_fixed', value: number) => Promise<Product[]>;
   deleteProduct: (id: string) => Promise<boolean>;
   updateOrderStatus: (orderId: string, status: Order['status'], note?: string, trackingNumber?: string, carrier?: string) => Promise<Order>;
+  cancelOrder: (orderId: string, reason?: string, cancelledBy?: 'Customer' | 'Admin') => Promise<Order>;
   addCategory: (cat: any) => Promise<Category>;
   createCategory: (cat: any) => Promise<Category>;
   deleteCategory: (id: string) => Promise<boolean>;
@@ -101,6 +113,52 @@ interface StoreContextType {
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
+
+// Default realistic addresses with tags for instant selection
+const DEFAULT_SAVED_ADDRESSES: ShippingAddress[] = [
+  {
+    id: 'addr-01',
+    label: 'Home (Primary)',
+    fullName: 'Sarah Jenkins',
+    email: 'sarah.jenkins@example.com',
+    phone: '+1 (555) 234-5678',
+    street: '742 Evergreen Terrace',
+    apartment: 'Apt 4B',
+    city: 'Portland',
+    state: 'OR',
+    zipCode: '97201',
+    country: 'United States',
+    isDefault: true
+  },
+  {
+    id: 'addr-02',
+    label: 'Creative Studio',
+    fullName: 'Sarah Jenkins',
+    email: 'sarah.studio@luminaart.com',
+    phone: '+1 (555) 891-2345',
+    street: '1200 NW 23rd Avenue',
+    apartment: 'Suite 300',
+    city: 'Portland',
+    state: 'OR',
+    zipCode: '97210',
+    country: 'United States',
+    isDefault: false
+  },
+  {
+    id: 'addr-03',
+    label: 'NYC Gallery & Office',
+    fullName: 'Sarah Jenkins',
+    email: 'sarah.jenkins@example.com',
+    phone: '+1 (555) 912-7890',
+    street: '520 West 28th Street',
+    apartment: 'Floor 5',
+    city: 'New York',
+    state: 'NY',
+    zipCode: '10001',
+    country: 'United States',
+    isDefault: false
+  }
+];
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Navigation State
@@ -153,23 +211,24 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         name: 'Sarah Jenkins',
         email: 'sarah.jenkins@example.com',
         phone: '+1 (555) 234-5678',
-        addresses: [
-          {
-            fullName: 'Sarah Jenkins',
-            email: 'sarah.jenkins@example.com',
-            phone: '+1 (555) 234-5678',
-            street: '742 Evergreen Terrace',
-            city: 'Portland',
-            state: 'OR',
-            zipCode: '97201',
-            country: 'United States',
-            isDefault: true
-          }
-        ],
+        addresses: DEFAULT_SAVED_ADDRESSES,
         wishlist: ['prod-01', 'prod-03']
       };
     } catch {
       return null;
+    }
+  });
+
+  // Saved Addresses (synced with user & localStorage)
+  const [savedAddresses, setSavedAddresses] = useState<ShippingAddress[]>(() => {
+    if (user?.addresses && user.addresses.length > 0) {
+      return user.addresses;
+    }
+    try {
+      const saved = localStorage.getItem('lumina_saved_addresses');
+      return saved ? JSON.parse(saved) : DEFAULT_SAVED_ADDRESSES;
+    } catch {
+      return DEFAULT_SAVED_ADDRESSES;
     }
   });
 
@@ -238,6 +297,21 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.warn(e);
     }
   }, [user]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lumina_saved_addresses', JSON.stringify(savedAddresses));
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [savedAddresses]);
+
+  // Keep savedAddresses in sync with user addresses when user changes
+  useEffect(() => {
+    if (user?.addresses && user.addresses.length > 0) {
+      setSavedAddresses(user.addresses);
+    }
+  }, [user?.addresses]);
 
   // Initial Data Fetch
   const fetchAllData = async () => {
@@ -558,25 +632,87 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const addAddress = (address: ShippingAddress) => {
-    if (!user) return;
-    const updated = {
-      ...user,
-      addresses: address.isDefault
-        ? [address, ...user.addresses.map((a) => ({ ...a, isDefault: false }))]
-        : [...user.addresses, address]
+    const newAddr: ShippingAddress = {
+      ...address,
+      id: address.id || `addr-${Date.now()}`
     };
-    setUser(updated);
-    showToast('Address added to profile');
+
+    setSavedAddresses((prev) => {
+      // If updating existing by id
+      const existingIdx = prev.findIndex((a) => a.id && a.id === newAddr.id);
+      let nextList = [...prev];
+      if (existingIdx >= 0) {
+        nextList[existingIdx] = newAddr;
+        if (newAddr.isDefault) {
+          nextList = nextList.map((a, i) => ({ ...a, isDefault: i === existingIdx }));
+        }
+      } else {
+        nextList = newAddr.isDefault
+          ? [newAddr, ...prev.map((a) => ({ ...a, isDefault: false }))]
+          : [...prev, newAddr];
+      }
+      return nextList;
+    });
+
+    if (user) {
+      const existingIdx = user.addresses.findIndex((a) => a.id && a.id === newAddr.id);
+      let nextAddresses = [...user.addresses];
+      if (existingIdx >= 0) {
+        nextAddresses[existingIdx] = newAddr;
+        if (newAddr.isDefault) {
+          nextAddresses = nextAddresses.map((a, i) => ({ ...a, isDefault: i === existingIdx }));
+        }
+      } else {
+        nextAddresses = newAddr.isDefault
+          ? [newAddr, ...user.addresses.map((a) => ({ ...a, isDefault: false }))]
+          : [...user.addresses, newAddr];
+      }
+      setUser({
+        ...user,
+        addresses: nextAddresses
+      });
+    }
+    showToast(`Address "${newAddr.label || newAddr.street}" updated`);
   };
 
-  const deleteAddress = (index: number) => {
-    if (!user) return;
-    const updated = {
-      ...user,
-      addresses: user.addresses.filter((_, i) => i !== index)
+  const saveAddress = (address: ShippingAddress) => {
+    addAddress(address);
+  };
+
+  const updateAddress = (address: ShippingAddress) => {
+    addAddress(address);
+  };
+
+  const deleteAddress = (indexOrId: number | string) => {
+    const filterFn = (a: ShippingAddress, i: number) => {
+      if (typeof indexOrId === 'number') return i !== indexOrId;
+      return a.id !== indexOrId;
     };
-    setUser(updated);
+
+    setSavedAddresses((prev) => prev.filter(filterFn));
+    if (user) {
+      setUser({
+        ...user,
+        addresses: user.addresses.filter(filterFn)
+      });
+    }
     showToast('Address removed');
+  };
+
+  const setDefaultAddress = (indexOrId: number | string) => {
+    const updateFn = (a: ShippingAddress, i: number) => {
+      const isTarget = typeof indexOrId === 'number' ? i === indexOrId : a.id === indexOrId;
+      return { ...a, isDefault: isTarget };
+    };
+
+    setSavedAddresses((prev) => prev.map(updateFn));
+    if (user) {
+      setUser({
+        ...user,
+        addresses: user.addresses.map(updateFn)
+      });
+    }
+    showToast('Default delivery address updated');
   };
 
   // Checkout Operations
@@ -656,6 +792,29 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
     if (!res.ok) throw new Error('Failed to update order status');
     return res.json();
+  };
+
+  const cancelOrder = async (
+    orderId: string,
+    reason?: string,
+    cancelledBy: 'Customer' | 'Admin' = 'Customer'
+  ): Promise<Order> => {
+    const res = await fetch(`/api/orders/${orderId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, cancelledBy })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to cancel order');
+    }
+    const cancelledOrder: Order = await res.json();
+    setOrders((prev) => prev.map((o) => (o.id === cancelledOrder.id || o.orderNumber === cancelledOrder.orderNumber ? cancelledOrder : o)));
+    if (currentOrder && (currentOrder.id === cancelledOrder.id || currentOrder.orderNumber === cancelledOrder.orderNumber)) {
+      setCurrentOrder(cancelledOrder);
+    }
+    showToast(`Order #${cancelledOrder.orderNumber} has been cancelled.`);
+    return cancelledOrder;
   };
 
   const addCategory = async (cat: any): Promise<Category> => {
@@ -767,11 +926,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         toggleWishlist,
         isInWishlist,
         user,
+        savedAddresses,
         loginUser,
         logoutUser,
         updateUserProfile,
         addAddress,
+        saveAddress,
+        updateAddress,
         deleteAddress,
+        setDefaultAddress,
         currentOrder,
         setCurrentOrder,
         placeOrder,
@@ -789,6 +952,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         bulkUpdatePrices,
         deleteProduct,
         updateOrderStatus,
+        cancelOrder,
         addCategory,
         createCategory: addCategory,
         deleteCategory,

@@ -26,7 +26,10 @@ import {
   LogOut,
   Smartphone,
   KeyRound,
-  Lock
+  Lock,
+  Ban,
+  XCircle,
+  RotateCcw
 } from 'lucide-react';
 import { Product, Order, OrderStatus, Category, Coupon, Review, StoreSettings } from '../types';
 
@@ -43,6 +46,7 @@ export const AdminDashboard: React.FC = () => {
     bulkUpdatePrices,
     deleteProduct,
     updateOrderStatus,
+    cancelOrder,
     createCategory,
     deleteCategory,
     createCoupon,
@@ -56,6 +60,34 @@ export const AdminDashboard: React.FC = () => {
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'categories' | 'coupons' | 'reviews' | 'settings'>('overview');
+
+  // Admin Order Cancellation State
+  const [adminCancellingOrder, setAdminCancellingOrder] = useState<Order | null>(null);
+  const [adminCancelReasonOption, setAdminCancelReasonOption] = useState<string>('Customer requested cancellation');
+  const [adminCustomReason, setAdminCustomReason] = useState<string>('');
+  const [isAdminCancelling, setIsAdminCancelling] = useState<boolean>(false);
+
+  const handleConfirmAdminCancel = async () => {
+    if (!adminCancellingOrder) return;
+    const finalReason = adminCancelReasonOption === 'Other' && adminCustomReason.trim()
+      ? adminCustomReason.trim()
+      : adminCancelReasonOption;
+
+    try {
+      setIsAdminCancelling(true);
+      const updated = await cancelOrder(adminCancellingOrder.id, finalReason, 'Admin');
+      if (viewingOrder && viewingOrder.id === updated.id) {
+        setViewingOrder(updated);
+      }
+      setAdminCancellingOrder(null);
+      setAdminCustomReason('');
+      showToast(`Order #${updated.orderNumber} successfully cancelled. Stock restocked & payment marked Refunded.`);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to cancel order.');
+    } finally {
+      setIsAdminCancelling(false);
+    }
+  };
 
   // Product Form Modal state
   const [showProductModal, setShowProductModal] = useState(false);
@@ -639,29 +671,63 @@ export const AdminDashboard: React.FC = () => {
                             ${order.total}
                           </td>
                           <td className="py-3">
-                            <select
-                              value={order.status}
-                              onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
-                              className="text-[11px] font-semibold bg-stone-100 border border-stone-300 rounded-lg px-2 py-1 focus:outline-none focus:border-stone-900 cursor-pointer"
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Processing">Processing (Lab)</option>
-                              <option value="Printed & Framed">Printed & Framed</option>
-                              <option value="Shipped">Shipped</option>
-                              <option value="Delivered">Delivered</option>
-                            </select>
+                            {order.status === 'Cancelled' ? (
+                              <span className="px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1">
+                                <Ban className="w-3 h-3 text-rose-600" />
+                                Cancelled
+                              </span>
+                            ) : (
+                              <select
+                                value={order.status}
+                                onChange={(e) => {
+                                  const next = e.target.value as OrderStatus;
+                                  if (next === 'Cancelled') {
+                                    setAdminCancellingOrder(order);
+                                    setAdminCancelReasonOption('Customer requested cancellation');
+                                    setAdminCustomReason('');
+                                  } else {
+                                    updateOrderStatus(order.id, next);
+                                  }
+                                }}
+                                className="text-[11px] font-semibold bg-stone-100 border border-stone-300 rounded-lg px-2 py-1 focus:outline-none focus:border-stone-900 cursor-pointer"
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Processing">Processing (Lab)</option>
+                                <option value="Printed & Framed">Printed & Framed</option>
+                                <option value="Shipped">Shipped</option>
+                                <option value="Delivered">Delivered</option>
+                                <option value="Cancelled">Cancel & Restock...</option>
+                              </select>
+                            )}
                           </td>
                           <td className="py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setViewingOrder(order);
-                                setEditingTracking(order.trackingNumber || '');
-                              }}
-                              className="px-3 py-1 bg-stone-900 text-white rounded-lg text-[11px] font-semibold hover:bg-stone-800"
-                            >
-                              Details
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {order.status !== 'Cancelled' && order.status !== 'Delivered' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAdminCancellingOrder(order);
+                                    setAdminCancelReasonOption('Customer requested cancellation');
+                                    setAdminCustomReason('');
+                                  }}
+                                  className="px-2.5 py-1 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                  title="Cancel & Restock Order"
+                                >
+                                  <Ban className="w-3 h-3 text-rose-600" />
+                                  <span>Cancel</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setViewingOrder(order);
+                                  setEditingTracking(order.trackingNumber || '');
+                                }}
+                                className="px-3 py-1 bg-stone-900 text-white rounded-lg text-[11px] font-semibold hover:bg-stone-800"
+                              >
+                                Details
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1209,11 +1275,25 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Customer & Shipping */}
-            <div className="p-3 bg-stone-50 rounded-xl text-xs space-y-1">
-              <div className="font-bold text-stone-900">{viewingOrder.customer.fullName} ({viewingOrder.customer.email})</div>
-              <div className="text-stone-600">{viewingOrder.shippingAddress.street} {viewingOrder.shippingAddress.apartment || ''}</div>
-              <div className="text-stone-600">{viewingOrder.shippingAddress.city}, {viewingOrder.shippingAddress.state} {viewingOrder.shippingAddress.zipCode}</div>
+            {/* Customer & Shipping & Payment */}
+            <div className="p-3.5 bg-stone-50 rounded-xl text-xs space-y-2 border border-stone-200">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-stone-900">{viewingOrder.customer.fullName} ({viewingOrder.customer.email})</div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  {viewingOrder.paymentStatus || 'Paid'}
+                </span>
+              </div>
+              <div className="text-stone-600">{viewingOrder.shippingAddress.street} {viewingOrder.shippingAddress.apartment || ''} • {viewingOrder.shippingAddress.city}, {viewingOrder.shippingAddress.state} {viewingOrder.shippingAddress.zipCode}</div>
+              
+              <div className="pt-2 border-t border-stone-200/80 flex items-center justify-between text-[11px]">
+                <span className="text-stone-500">
+                  Payment Method: <strong className="text-stone-900">{viewingOrder.paymentMethod}</strong>
+                  {viewingOrder.upiId && <span className="text-stone-600 font-mono ml-1">({viewingOrder.upiId})</span>}
+                </span>
+                {viewingOrder.upiTransactionRef && (
+                  <span className="font-mono text-stone-500 text-[10px]">Ref: {viewingOrder.upiTransactionRef}</span>
+                )}
+              </div>
             </div>
 
             {/* Prints in order */}
@@ -1236,50 +1316,97 @@ export const AdminDashboard: React.FC = () => {
               ))}
             </div>
 
-            {/* Status & Tracking Number Editor */}
-            <div className="space-y-3 pt-2 border-t border-stone-100 text-xs">
-              <div>
-                <label className="block font-medium text-stone-700 mb-1">Update Fulfillment Status</label>
-                <select
-                  value={viewingOrder.status}
-                  onChange={(e) => {
-                    const nextStatus = e.target.value as OrderStatus;
-                    updateOrderStatus(viewingOrder.id, nextStatus);
-                    setViewingOrder({ ...viewingOrder, status: nextStatus });
-                  }}
-                  className="w-full p-2.5 border border-stone-300 rounded-lg font-semibold bg-white"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Processing">Processing (Lab Color Calibration)</option>
-                  <option value="Printed & Framed">Printed & Framed</option>
-                  <option value="Shipped">Shipped (Dispatched to Courier)</option>
-                  <option value="Delivered">Delivered</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-medium text-stone-700 mb-1">Courier Tracking Code</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={editingTracking}
-                    onChange={(e) => setEditingTracking(e.target.value)}
-                    placeholder="FX-49382910482"
-                    className="flex-1 p-2 border border-stone-300 rounded-lg font-mono text-xs"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateOrderStatus(viewingOrder.id, viewingOrder.status, editingTracking);
-                      showToast('Tracking number updated.');
-                    }}
-                    className="px-4 py-2 bg-stone-900 text-white rounded-lg font-semibold"
-                  >
-                    Save Tracking
-                  </button>
+            {/* Status & Tracking Number Editor OR Cancelled Info */}
+            {viewingOrder.status === 'Cancelled' ? (
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-bold text-rose-950">
+                  <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Order Cancelled & Restocked</span>
+                </div>
+                <p className="text-rose-900">
+                  Cancelled by <span className="font-semibold">{viewingOrder.cancelledBy || 'Admin'}</span> on {new Date(viewingOrder.cancelledAt || viewingOrder.createdAt).toLocaleDateString()}.
+                </p>
+                {viewingOrder.cancelReason && (
+                  <p className="text-stone-700 italic bg-white/70 p-2 rounded-lg border border-rose-100">
+                    Reason: "{viewingOrder.cancelReason}"
+                  </p>
+                )}
+                <div className="pt-2 border-t border-rose-200/80 flex items-center justify-between text-[11px] font-semibold">
+                  <span className="text-emerald-800 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" />
+                    Payment Refunded (${viewingOrder.total})
+                  </span>
+                  <span className="text-stone-500">Method: {viewingOrder.paymentMethod}</span>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4 pt-2 border-t border-stone-100 text-xs">
+                <div>
+                  <label className="block font-medium text-stone-700 mb-1">Update Fulfillment Status</label>
+                  <select
+                    value={viewingOrder.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value as OrderStatus;
+                      if (nextStatus === 'Cancelled') {
+                        setAdminCancellingOrder(viewingOrder);
+                        setAdminCancelReasonOption('Customer requested cancellation');
+                        setAdminCustomReason('');
+                      } else {
+                        updateOrderStatus(viewingOrder.id, nextStatus);
+                        setViewingOrder({ ...viewingOrder, status: nextStatus });
+                      }
+                    }}
+                    className="w-full p-2.5 border border-stone-300 rounded-lg font-semibold bg-white"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing (Lab Color Calibration)</option>
+                    <option value="Printed & Framed">Printed & Framed</option>
+                    <option value="Shipped">Shipped (Dispatched to Courier)</option>
+                    <option value="Delivered">Delivered</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-stone-700 mb-1">Courier Tracking Code</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editingTracking}
+                      onChange={(e) => setEditingTracking(e.target.value)}
+                      placeholder="FX-49382910482"
+                      className="flex-1 p-2 border border-stone-300 rounded-lg font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateOrderStatus(viewingOrder.id, viewingOrder.status, editingTracking);
+                        showToast('Tracking number updated.');
+                      }}
+                      className="px-4 py-2 bg-stone-900 text-white rounded-lg font-semibold"
+                    >
+                      Save Tracking
+                    </button>
+                  </div>
+                </div>
+
+                {viewingOrder.status !== 'Delivered' && (
+                  <div className="pt-2 border-t border-stone-100 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminCancellingOrder(viewingOrder);
+                        setAdminCancelReasonOption('Customer requested cancellation');
+                        setAdminCustomReason('');
+                      }}
+                      className="px-4 py-2 border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-semibold flex items-center gap-1.5 transition-colors"
+                    >
+                      <Ban className="w-4 h-4 text-rose-600" />
+                      <span>Cancel & Restock Order (Refund)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1461,6 +1588,108 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Order Cancellation & Restock Modal */}
+      {adminCancellingOrder && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp space-y-5">
+            <div className="flex items-start justify-between pb-4 border-b border-stone-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-stone-950">
+                    Cancel & Restock Order #{adminCancellingOrder.orderNumber}
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Collector: {adminCancellingOrder.customer.fullName} ({adminCancellingOrder.customer.email})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdminCancellingOrder(null)}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Inventory Restock Notice */}
+            <div className="p-3.5 bg-stone-50 rounded-2xl border border-stone-200 text-xs space-y-2">
+              <div className="font-semibold text-stone-900 flex items-center justify-between">
+                <span>Items to Restock:</span>
+                <span className="font-mono text-stone-950">{adminCancellingOrder.items.length} artwork items</span>
+              </div>
+              <div className="space-y-1 pt-1 border-t border-stone-200/80">
+                {adminCancellingOrder.items.map((it, idx) => (
+                  <div key={idx} className="flex justify-between text-stone-600 text-[11px]">
+                    <span className="truncate max-w-[240px]">{it.name} ({it.sizeName})</span>
+                    <span className="font-medium text-emerald-800">+{it.quantity} inventory returned</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-stone-200 flex items-center justify-between text-xs font-semibold">
+                <span className="text-stone-600">Total Refund:</span>
+                <span className="font-mono font-bold text-stone-950">${adminCancellingOrder.total} ({adminCancellingOrder.paymentMethod})</span>
+              </div>
+            </div>
+
+            {/* Cancellation Reason Selection */}
+            <div className="space-y-3 text-xs">
+              <label className="block font-semibold text-stone-800">
+                Admin Cancellation Reason:
+              </label>
+              <select
+                value={adminCancelReasonOption}
+                onChange={(e) => setAdminCancelReasonOption(e.target.value)}
+                className="w-full p-2.5 bg-white border border-stone-300 rounded-xl focus:outline-none focus:border-stone-900 font-medium text-stone-800"
+              >
+                <option value="Customer requested cancellation via support">Customer requested cancellation via support</option>
+                <option value="Item out of stock / Print lab paper unavailable">Item out of stock / Print lab paper unavailable</option>
+                <option value="Suspected fraudulent order / failed verification">Suspected fraudulent order / failed verification</option>
+                <option value="Pricing or discount calculation error">Pricing or discount calculation error</option>
+                <option value="Undeliverable shipping destination">Undeliverable shipping destination</option>
+                <option value="Other">Other (specify below)</option>
+              </select>
+
+              {adminCancelReasonOption === 'Other' && (
+                <div>
+                  <textarea
+                    rows={2}
+                    value={adminCustomReason}
+                    onChange={(e) => setAdminCustomReason(e.target.value)}
+                    placeholder="Enter reason for audit logs and customer notification..."
+                    className="w-full p-2.5 bg-white border border-stone-300 rounded-xl focus:outline-none focus:border-stone-900 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isAdminCancelling}
+                onClick={() => setAdminCancellingOrder(null)}
+                className="px-4 py-2 border border-stone-300 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-50 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                type="button"
+                disabled={isAdminCancelling}
+                onClick={handleConfirmAdminCancel}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Ban className="w-4 h-4" />
+                <span>{isAdminCancelling ? 'Processing...' : 'Confirm Cancel & Restock'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

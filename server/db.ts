@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Product, Category, Order, Coupon, Review, UserAccount } from '../src/types';
+import { Product, Category, Order, Coupon, Review, UserAccount, SupportTicket } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -510,6 +510,7 @@ export interface DatabaseSchema {
   coupons: Coupon[];
   reviews: Review[];
   users: UserAccount[];
+  supportTickets?: SupportTicket[];
   adminAuth?: AdminAuth;
 }
 
@@ -738,9 +739,22 @@ class Database {
     const order = this.data.orders.find((o) => o.id === orderId || o.orderNumber === orderId);
     if (!order) return null;
 
+    const previousStatus = order.status;
     order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (carrier) order.shippingCarrier = carrier;
+
+    // If order was transitioned to Cancelled and wasn't previously cancelled, restock items
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled') {
+      order.paymentStatus = 'Refunded';
+      order.items.forEach((item) => {
+        const prod = this.data.products.find((p) => p.id === item.productId);
+        if (prod) {
+          prod.stock += item.quantity;
+        }
+      });
+      this.broadcast('inventory_changed', { products: this.data.products });
+    }
 
     order.timeline.push({
       status,
@@ -750,6 +764,40 @@ class Database {
 
     this.saveData(this.data);
     this.broadcast('order_updated', order);
+    return order;
+  }
+
+  public cancelOrder(orderId: string, reason?: string, cancelledBy?: 'Customer' | 'Admin'): Order | null {
+    const order = this.data.orders.find((o) => o.id === orderId || o.orderNumber === orderId);
+    if (!order) return null;
+
+    if (order.status === 'Cancelled') {
+      return order; // Already cancelled
+    }
+
+    order.status = 'Cancelled';
+    order.paymentStatus = 'Refunded';
+    order.cancelReason = reason || `Cancelled by ${cancelledBy || 'Customer'}`;
+    order.cancelledBy = cancelledBy || 'Customer';
+    order.cancelledAt = new Date().toISOString();
+
+    // Restock the inventory
+    order.items.forEach((item) => {
+      const prod = this.data.products.find((p) => p.id === item.productId);
+      if (prod) {
+        prod.stock += item.quantity;
+      }
+    });
+
+    order.timeline.push({
+      status: 'Cancelled',
+      timestamp: new Date().toISOString(),
+      note: `Order cancelled by ${cancelledBy || 'Customer'}. Reason: ${reason || 'No reason provided'}. Full refund initiated.`
+    });
+
+    this.saveData(this.data);
+    this.broadcast('order_updated', order);
+    this.broadcast('inventory_changed', { products: this.data.products });
     return order;
   }
 
@@ -989,6 +1037,137 @@ class Database {
     auth.activeOtp = null;
     this.saveData(this.data);
     return { success: true, message: 'Admin password successfully updated.' };
+  }
+
+  // Support Tickets Operations
+  public getSupportTickets(): SupportTicket[] {
+    if (!this.data.supportTickets) {
+      this.data.supportTickets = [
+        {
+          id: 'tkt-101',
+          ticketNumber: 'TKT-9482',
+          name: 'Sarah Jenkins',
+          email: 'sarah.jenkins@example.com',
+          phone: '+1 (555) 234-5678',
+          orderNumber: 'LUM-8821',
+          category: 'Custom Framing & Sizing',
+          priority: 'Medium',
+          subject: 'Question on solid oak frame glass UV protection',
+          message: 'Hello Lumina Support, I ordered the Bauhaus Geometric Composition No. 04 with a Solid Natural Oak frame. Could you confirm if the acrylic glass includes UV-filtering properties for bright sunlit rooms?',
+          status: 'Resolved',
+          createdAt: '2026-09-12T11:20:00Z',
+          updatedAt: '2026-09-12T14:45:00Z',
+          responses: [
+            {
+              id: 'resp-1',
+              sender: 'Customer',
+              senderName: 'Sarah Jenkins',
+              message: 'Hello Lumina Support, I ordered the Bauhaus Geometric Composition No. 04 with a Solid Natural Oak frame. Could you confirm if the acrylic glass includes UV-filtering properties for bright sunlit rooms?',
+              timestamp: '2026-09-12T11:20:00Z'
+            },
+            {
+              id: 'resp-2',
+              sender: 'Support Agent',
+              senderName: 'Elena (Lumina Framing Specialist)',
+              message: 'Hi Sarah! Yes, all our solid oak and aluminum frames are fitted with optical museum-grade cast acrylic that blocks 92% of UV rays, preventing color fading over time.',
+              timestamp: '2026-09-12T14:45:00Z'
+            }
+          ]
+        },
+        {
+          id: 'tkt-102',
+          ticketNumber: 'TKT-9483',
+          name: 'David Miller',
+          email: 'david.m@example.com',
+          phone: '+1 (555) 876-5432',
+          orderNumber: 'LUM-84911',
+          category: 'Order Status & Tracking',
+          priority: 'Low',
+          subject: 'Delivery address confirmation for Mercer St',
+          message: 'Hi there, just wanted to ensure the courier notes include my buzzer number #4B for the Mercer street delivery.',
+          status: 'In Progress',
+          createdAt: '2026-09-13T08:15:00Z',
+          updatedAt: '2026-09-13T08:30:00Z',
+          responses: [
+            {
+              id: 'resp-1',
+              sender: 'Customer',
+              senderName: 'David Miller',
+              message: 'Hi there, just wanted to ensure the courier notes include my buzzer number #4B for the Mercer street delivery.',
+              timestamp: '2026-09-13T08:15:00Z'
+            },
+            {
+              id: 'resp-2',
+              sender: 'Support Agent',
+              senderName: 'Marcus (Lumina Logistics)',
+              message: 'Hi David! We have attached the buzzer instruction directly to your FedEx courier manifest.',
+              timestamp: '2026-09-13T08:30:00Z'
+            }
+          ]
+        }
+      ];
+      this.saveData(this.data);
+    }
+    return this.data.supportTickets;
+  }
+
+  public createSupportTicket(ticketData: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'status' | 'responses'>): SupportTicket {
+    const tickets = this.getSupportTickets();
+    const newTicket: SupportTicket = {
+      ...ticketData,
+      id: `tkt-${Date.now()}`,
+      ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: 'Open',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      responses: [
+        {
+          id: `resp-${Date.now()}`,
+          sender: 'Customer',
+          senderName: ticketData.name,
+          message: ticketData.message,
+          timestamp: new Date().toISOString()
+        }
+      ]
+    };
+    tickets.unshift(newTicket);
+    this.saveData(this.data);
+    this.broadcast('support_ticket_created', newTicket);
+    return newTicket;
+  }
+
+  public addTicketResponse(ticketId: string, sender: 'Customer' | 'Support Agent', senderName: string, message: string): SupportTicket | null {
+    const tickets = this.getSupportTickets();
+    const ticket = tickets.find((t) => t.id === ticketId || t.ticketNumber === ticketId);
+    if (!ticket) return null;
+
+    if (!ticket.responses) ticket.responses = [];
+    ticket.responses.push({
+      id: `resp-${Date.now()}`,
+      sender,
+      senderName,
+      message,
+      timestamp: new Date().toISOString()
+    });
+    ticket.updatedAt = new Date().toISOString();
+    if (sender === 'Support Agent' && ticket.status === 'Open') {
+      ticket.status = 'In Progress';
+    }
+    this.saveData(this.data);
+    this.broadcast('support_ticket_updated', ticket);
+    return ticket;
+  }
+
+  public updateTicketStatus(ticketId: string, status: SupportTicket['status']): SupportTicket | null {
+    const tickets = this.getSupportTickets();
+    const ticket = tickets.find((t) => t.id === ticketId || t.ticketNumber === ticketId);
+    if (!ticket) return null;
+
+    ticket.status = status;
+    ticket.updatedAt = new Date().toISOString();
+    this.saveData(this.data);
+    this.broadcast('support_ticket_updated', ticket);
+    return ticket;
   }
 }
 

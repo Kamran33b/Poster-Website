@@ -25,3 +25,24 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a29e;
 }
+
+/* Continuous banner animation from left to right */
+@keyframes bannerLeftToRight {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100vw);
+  }
+}
+
+.animate-banner-scroll {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: bannerLeftToRight 25s linear infinite;
+  will-change: transform;
+}
+
+.animate-banner-scroll:hover {
+  animation-play-state: paused;
+}
