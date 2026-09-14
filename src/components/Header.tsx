@@ -15,8 +15,12 @@ import {
   ArrowRight,
   ShieldCheck,
   Tag,
-  Lock
+  Lock,
+  Code2,
+  Sun,
+  Moon
 } from 'lucide-react';
+import { DeveloperModal } from './DeveloperModal';
 
 interface SlidingMenuButtonProps {
   isOpen: boolean;
@@ -93,13 +97,17 @@ export const Header: React.FC = () => {
     setIsAdminAuthenticated,
     openAdminPortal,
     logoutAdmin,
-    formatPrice
+    formatPrice,
+    theme,
+    setTheme,
+    toggleTheme
   } = useStore();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState('');
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDeveloperModalOpen, setIsDeveloperModalOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const searchResults = localSearch.trim()
@@ -287,6 +295,17 @@ export const Header: React.FC = () => {
           >
             Best Sellers
           </button>
+
+          <button
+            id="nav-developer-details"
+            type="button"
+            onClick={() => setIsDeveloperModalOpen(true)}
+            className="transition-colors hover:text-stone-950 flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold select-none cursor-pointer border border-stone-200/80 shadow-2xs group"
+            title="Developer Details & Technical Architecture"
+          >
+            <Code2 className="w-3.5 h-3.5 text-amber-700 group-hover:text-amber-800 transition-colors" />
+            <span>Developer</span>
+          </button>
         </nav>
 
         {/* Right: Actions (Search, Wishlist, Account, Cart, Admin Switch) */}
@@ -438,6 +457,22 @@ export const Header: React.FC = () => {
             )}
           </button>
 
+          {/* Theme Mode Toggle (Light / Dark) */}
+          <button
+            id="header-theme-toggle"
+            type="button"
+            onClick={toggleTheme}
+            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/50 transition-all flex items-center justify-center cursor-pointer group"
+            aria-label={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
+            title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 text-amber-400 group-hover:rotate-45 transition-transform" />
+            ) : (
+              <Moon className="w-5 h-5 text-stone-700 group-hover:-rotate-12 transition-transform" />
+            )}
+          </button>
+
           {/* Admin Switcher Button */}
           <div className="border-l border-stone-300 pl-2 sm:pl-3">
             <button
@@ -505,13 +540,70 @@ export const Header: React.FC = () => {
                         Fine Art Posters
                       </span>
                     </div>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="p-1.5 rounded-lg bg-stone-100 text-stone-600 hover:text-stone-900"
-                    >
-                      <X className="w-5 h-5" />
-                    </motion.button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        id="mobile-theme-quick-toggle"
+                        type="button"
+                        onClick={toggleTheme}
+                        className="p-1.5 rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200 flex items-center gap-1.5 text-xs font-semibold"
+                        title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                      >
+                        {theme === 'dark' ? (
+                          <>
+                            <Sun className="w-4 h-4 text-amber-400" />
+                            <span className="text-[11px]">Light</span>
+                          </>
+                        ) : (
+                          <>
+                            <Moon className="w-4 h-4 text-stone-700" />
+                            <span className="text-[11px]">Dark</span>
+                          </>
+                        )}
+                      </button>
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="p-1.5 rounded-lg bg-stone-100 text-stone-600 hover:text-stone-900"
+                      >
+                        <X className="w-5 h-5" />
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Theme Mode Selector Card in Mobile Drawer */}
+                  <div className="p-2.5 rounded-xl bg-stone-100/90 border border-stone-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {theme === 'dark' ? (
+                        <Moon className="w-4 h-4 text-amber-400" />
+                      ) : (
+                        <Sun className="w-4 h-4 text-amber-600" />
+                      )}
+                      <span className="text-xs font-semibold text-stone-800">Theme Mode</span>
+                    </div>
+                    <div className="flex items-center bg-white rounded-lg p-0.5 border border-stone-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setTheme('light')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          theme === 'light'
+                            ? 'bg-stone-900 text-white shadow-xs'
+                            : 'text-stone-600 hover:text-stone-900'
+                        }`}
+                      >
+                        Light
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTheme('dark')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          theme === 'dark'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'text-stone-600 hover:text-stone-900'
+                        }`}
+                      >
+                        Dark
+                      </button>
+                    </div>
                   </div>
 
                   {/* Staggered Navigation Items */}
@@ -597,10 +689,30 @@ export const Header: React.FC = () => {
                         setCurrentView('account');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="text-left font-semibold text-stone-900 py-2 flex items-center justify-between group"
+                      className="text-left font-semibold text-stone-900 py-2 border-b border-stone-100 flex items-center justify-between group"
                     >
                       <span className="group-hover:translate-x-1 transition-transform">Saved Wishlist ({wishlist.length})</span>
                       <Heart className="w-4 h-4 text-stone-400" />
+                    </motion.button>
+
+                    <motion.button
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.24 }}
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setIsDeveloperModalOpen(true);
+                      }}
+                      className="text-left font-semibold text-stone-900 py-2 flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Code2 className="w-4 h-4 text-amber-700" />
+                        <span className="group-hover:translate-x-1 transition-transform">Developer Details</span>
+                      </div>
+                      <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-mono font-bold">
+                        Lead Dev
+                      </span>
                     </motion.button>
                   </div>
                 </div>
@@ -627,6 +739,12 @@ export const Header: React.FC = () => {
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Developer Details Modal */}
+      <DeveloperModal
+        isOpen={isDeveloperModalOpen}
+        onClose={() => setIsDeveloperModalOpen(false)}
+      />
     </header>
   );
 };

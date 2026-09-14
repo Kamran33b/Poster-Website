@@ -210,3 +210,6 @@ export interface StoreSettings {
   supportPhone?: string;
   supportHours?: string;
 }
+
+export type ThemeMode = 'light' | 'dark';
+

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-serif: "Playfair Display", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -10,6 +12,10 @@ html {
   scroll-behavior: smooth;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -18,12 +24,21 @@ html {
 ::-webkit-scrollbar-track {
   background: #f5f3ef;
 }
+.dark ::-webkit-scrollbar-track {
+  background: #191816;
+}
 ::-webkit-scrollbar-thumb {
   background: #d6d3cd;
   border-radius: 9999px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3c37;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a29e;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #57534e;
 }
 
 /* Continuous banner animation from left to right */
@@ -46,3 +61,386 @@ html {
 .animate-banner-scroll:hover {
   animation-play-state: paused;
 }
+
+/* Global Dark Theme Style Overrides for consistent dark luxury atmosphere */
+html.dark {
+  background-color: #12110f;
+  color: #f7f5f0;
+}
+
+html.dark body {
+  background-color: #12110f;
+  color: #f7f5f0;
+}
+
+/* Base Headings & typography default in dark mode */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: #fcfbf9;
+}
+
+/* Surface backgrounds in dark mode */
+html.dark .bg-\[\#faf8f5\] {
+  background-color: #12110f !important;
+}
+
+html.dark .bg-\[\#faf8f5\]\/95 {
+  background-color: rgba(18, 17, 15, 0.95) !important;
+}
+
+html.dark .bg-white {
+  background-color: #1c1a17 !important;
+  color: #f7f5f0;
+}
+
+html.dark .bg-white\/80,
+html.dark .bg-white\/90,
+html.dark .bg-white\/95 {
+  background-color: rgba(28, 26, 23, 0.9) !important;
+  color: #f7f5f0;
+}
+
+html.dark .bg-stone-50 {
+  background-color: #161513 !important;
+}
+
+html.dark .bg-stone-100 {
+  background-color: #23211d !important;
+}
+
+html.dark .bg-stone-200 {
+  background-color: #2d2a25 !important;
+}
+
+html.dark .bg-stone-50\/60,
+html.dark .bg-stone-50\/80 {
+  background-color: rgba(22, 21, 19, 0.75) !important;
+}
+
+html.dark .bg-stone-100\/90,
+html.dark .bg-stone-100\/80 {
+  background-color: rgba(35, 33, 29, 0.9) !important;
+}
+
+html.dark .bg-stone-200\/50,
+html.dark .bg-stone-200\/60,
+html.dark .bg-stone-200\/90 {
+  background-color: rgba(45, 42, 37, 0.75) !important;
+}
+
+/* Elevated buttons in dark mode */
+html.dark button.bg-stone-900,
+html.dark button.bg-stone-950,
+html.dark a.bg-stone-900,
+html.dark a.bg-stone-950,
+html.dark .bg-stone-900:is(button, a),
+html.dark .bg-stone-950:is(button, a) {
+  background-color: #282521 !important;
+  border: 1px solid #484339 !important;
+  color: #ffffff !important;
+}
+html.dark button.bg-stone-900:hover,
+html.dark button.bg-stone-950:hover,
+html.dark a.bg-stone-900:hover,
+html.dark a.bg-stone-950:hover {
+  background-color: #38342c !important;
+  border-color: #635b4c !important;
+}
+
+/* ========================================================= */
+/* DYNAMIC TEXT COLOR VISIBILITY RULES FOR DARK MODE         */
+/* Automatically maps dark text to high-contrast luminances  */
+/* ========================================================= */
+
+/* Stone Neutrals - mapped dynamically to bright warm neutrals */
+html.dark .text-stone-950,
+.dark .text-stone-950 {
+  color: #ffffff !important;
+}
+
+html.dark .text-stone-900,
+.dark .text-stone-900 {
+  color: #fdfcf9 !important;
+}
+
+html.dark .text-stone-800,
+.dark .text-stone-800 {
+  color: #f3efe7 !important;
+}
+
+html.dark .text-stone-700,
+.dark .text-stone-700 {
+  color: #e2ddd3 !important;
+}
+
+html.dark .text-stone-600,
+.dark .text-stone-600 {
+  color: #c8c2b7 !important;
+}
+
+html.dark .text-stone-500,
+.dark .text-stone-500 {
+  color: #b5aea3 !important;
+}
+
+html.dark .text-stone-400,
+.dark .text-stone-400 {
+  color: #9e978c !important;
+}
+
+html.dark .text-stone-300,
+.dark .text-stone-300 {
+  color: #ded9d0 !important;
+}
+
+html.dark .text-stone-200,
+.dark .text-stone-200 {
+  color: #ede9e3 !important;
+}
+
+html.dark .text-stone-100,
+.dark .text-stone-100 {
+  color: #fbf9f6 !important;
+}
+
+/* Amber Accents - dynamically brightened to glowing golden ambers */
+html.dark .text-amber-950,
+.dark .text-amber-950 {
+  color: #fef3c7 !important;
+}
+
+html.dark .text-amber-900,
+.dark .text-amber-900 {
+  color: #fde68a !important;
+}
+
+html.dark .text-amber-800,
+.dark .text-amber-800 {
+  color: #fcd34d !important;
+}
+
+html.dark .text-amber-700,
+.dark .text-amber-700 {
+  color: #fbbf24 !important;
+}
+
+html.dark .text-amber-600,
+.dark .text-amber-600 {
+  color: #fbbf24 !important;
+}
+
+html.dark .text-amber-500,
+.dark .text-amber-500 {
+  color: #f59e0b !important;
+}
+
+/* Emerald Accents - dynamically brightened to radiant mint/emerald */
+html.dark .text-emerald-950,
+.dark .text-emerald-950 {
+  color: #d1fae5 !important;
+}
+
+html.dark .text-emerald-900,
+.dark .text-emerald-900 {
+  color: #a7f3d0 !important;
+}
+
+html.dark .text-emerald-800,
+.dark .text-emerald-800 {
+  color: #6ee7b7 !important;
+}
+
+html.dark .text-emerald-700,
+.dark .text-emerald-700 {
+  color: #34d399 !important;
+}
+
+html.dark .text-emerald-600,
+.dark .text-emerald-600 {
+  color: #34d399 !important;
+}
+
+/* Rose & Red Accents - dynamically brightened to luminous coral/rose */
+html.dark .text-rose-950,
+.dark .text-rose-950 {
+  color: #ffe4e6 !important;
+}
+
+html.dark .text-rose-900,
+.dark .text-rose-900 {
+  color: #fecdd3 !important;
+}
+
+html.dark .text-rose-800,
+.dark .text-rose-800 {
+  color: #fca5a5 !important;
+}
+
+html.dark .text-rose-700,
+.dark .text-rose-700 {
+  color: #f87171 !important;
+}
+
+html.dark .text-rose-600,
+.dark .text-rose-600 {
+  color: #fb7185 !important;
+}
+
+html.dark .text-red-700,
+.dark .text-red-700 {
+  color: #f87171 !important;
+}
+
+/* Blue Accents - dynamically brightened */
+html.dark .text-blue-950,
+.dark .text-blue-950,
+html.dark .text-blue-900,
+.dark .text-blue-900 {
+  color: #bfdbfe !important;
+}
+
+html.dark .text-blue-800,
+.dark .text-blue-800 {
+  color: #93c5fd !important;
+}
+
+/* Hover & Group Hover States in Dark Mode */
+html.dark .hover\:text-stone-950:hover,
+.dark .hover\:text-stone-950:hover,
+html.dark .hover\:text-stone-900:hover,
+.dark .hover\:text-stone-900:hover,
+html.dark .hover\:text-white:hover,
+.dark .hover\:text-white:hover {
+  color: #ffffff !important;
+}
+
+html.dark .hover\:text-stone-800:hover,
+.dark .hover\:text-stone-800:hover {
+  color: #fbf9f5 !important;
+}
+
+html.dark .hover\:text-stone-700:hover,
+.dark .hover\:text-stone-700:hover {
+  color: #edeae2 !important;
+}
+
+html.dark .hover\:text-amber-800:hover,
+.dark .hover\:text-amber-800:hover {
+  color: #fde68a !important;
+}
+
+html.dark .hover\:text-amber-700:hover,
+.dark .hover\:text-amber-700:hover {
+  color: #fcd34d !important;
+}
+
+html.dark .hover\:text-amber-600:hover,
+.dark .hover\:text-amber-600:hover {
+  color: #fbbf24 !important;
+}
+
+/* Group hover text */
+html.dark .group:hover .group-hover\:text-stone-950,
+.dark .group:hover .group-hover\:text-stone-950,
+html.dark .group:hover .group-hover\:text-stone-900,
+.dark .group:hover .group-hover\:text-stone-900,
+html.dark .group:hover .group-hover\:text-white,
+.dark .group:hover .group-hover\:text-white {
+  color: #ffffff !important;
+}
+
+html.dark .group:hover .group-hover\:text-amber-800,
+.dark .group:hover .group-hover\:text-amber-800 {
+  color: #fde68a !important;
+}
+
+html.dark .group:hover .group-hover\:text-amber-700,
+.dark .group:hover .group-hover\:text-amber-700 {
+  color: #fcd34d !important;
+}
+
+/* Badge backgrounds in Dark Mode */
+html.dark .bg-amber-100,
+html.dark .bg-amber-50,
+.dark .bg-amber-100,
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+html.dark .bg-emerald-100,
+html.dark .bg-emerald-50,
+.dark .bg-emerald-100,
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+html.dark .bg-rose-100,
+html.dark .bg-rose-50,
+.dark .bg-rose-100,
+.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.18) !important;
+  border-color: rgba(244, 63, 94, 0.35) !important;
+}
+
+html.dark .bg-blue-100,
+html.dark .bg-blue-50,
+.dark .bg-blue-100,
+.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.18) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+/* Borders in dark mode */
+html.dark .border-stone-200,
+html.dark .border-stone-200\/80,
+html.dark .border-stone-200\/60,
+.dark .border-stone-200,
+.dark .border-stone-200\/80,
+.dark .border-stone-200\/60 {
+  border-color: #2d2a25 !important;
+}
+
+html.dark .border-stone-300,
+html.dark .border-stone-300\/80,
+.dark .border-stone-300,
+.dark .border-stone-300\/80 {
+  border-color: #3b3731 !important;
+}
+
+html.dark .border-stone-100,
+.dark .border-stone-100 {
+  border-color: #24221e !important;
+}
+
+/* Form inputs & textareas in dark mode */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea,
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #1a1815 !important;
+  color: #fdfcf9 !important;
+  border-color: #3a362f !important;
+}
+
+html.dark select option,
+.dark select option {
+  background-color: #1a1815 !important;
+  color: #fdfcf9 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder,
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #8c867a !important;
+}
+
+

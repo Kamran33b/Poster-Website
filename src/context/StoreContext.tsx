@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, Category, CartItem, Order, Coupon, Review, UserAccount, ShippingAddress, PosterSize, FrameOption, StoreSettings, SupportTicket } from '../types';
+import { Product, Category, CartItem, Order, Coupon, Review, UserAccount, ShippingAddress, PosterSize, FrameOption, StoreSettings, SupportTicket, ThemeMode } from '../types';
 
 interface StoreContextType {
   // Navigation & View state
@@ -111,6 +111,11 @@ interface StoreContextType {
   setIsAdminAuthModalOpen: (open: boolean) => void;
   openAdminPortal: () => void;
   logoutAdmin: () => void;
+
+  // Theme Mode
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -251,6 +256,43 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   });
   const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
+
+  // Theme Mode (Light / Dark)
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    try {
+      const saved = localStorage.getItem('lumina_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch {}
+    return 'light';
+  });
+
+  const setTheme = (newTheme: ThemeMode) => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem('lumina_theme', newTheme);
+    } catch {}
+  };
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      const body = document.body;
+      if (theme === 'dark') {
+        root.classList.add('dark');
+        body.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+        body.classList.remove('dark');
+      }
+    }
+  }, [theme]);
 
   const openAdminPortal = () => {
     if (sessionStorage.getItem('lumina_admin_authenticated') === 'true') {
@@ -1007,7 +1049,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         isAdminAuthModalOpen,
         setIsAdminAuthModalOpen,
         openAdminPortal,
-        logoutAdmin
+        logoutAdmin,
+        theme,
+        setTheme,
+        toggleTheme
       }}
     >
       {children}

@@ -43,7 +43,7 @@ const AppContent: React.FC = () => {
   }, [currentView]);
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans antialiased flex flex-col selection:bg-stone-900 selection:text-amber-300 relative">
+    <div className="min-h-screen bg-[#faf8f5] dark:bg-[#12110f] text-stone-900 dark:text-stone-100 font-sans antialiased flex flex-col selection:bg-stone-900 selection:text-amber-300 dark:selection:bg-amber-500 dark:selection:text-stone-950 relative transition-colors duration-200">
       {/* If admin view is active and authenticated, show Admin Dashboard */}
       {currentView === 'admin' && isAdminAuthenticated ? (
         <AdminDashboard />
