@@ -761,7 +761,7 @@ export const CheckoutModal: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-bold text-stone-900">
-                        {shippingCost === 0 ? 'FREE' : `$${shippingCost}`}
+                        {shippingCost === 0 ? 'FREE' : formatPrice(shippingCost)}
                       </span>
                     </button>
 
@@ -784,7 +784,7 @@ export const CheckoutModal: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-bold text-stone-900">
-                        +$12.00
+                        +{formatPrice(12)}
                       </span>
                     </button>
                   </div>

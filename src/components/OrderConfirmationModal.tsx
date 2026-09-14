@@ -18,7 +18,7 @@ import {
 import { OrderStatus } from '../types';
 
 export const OrderConfirmationModal: React.FC = () => {
-  const { currentOrder, setCurrentView, orders, cancelOrder, showToast } = useStore();
+  const { currentOrder, setCurrentView, orders, cancelOrder, showToast, formatPrice } = useStore();
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReasonOption, setCancelReasonOption] = useState('Changed my mind / No longer needed');
@@ -286,27 +286,27 @@ export const OrderConfirmationModal: React.FC = () => {
             <div className="space-y-1.5 text-stone-600 sm:text-right">
               <div className="flex justify-between sm:justify-end sm:gap-6">
                 <span>Subtotal:</span>
-                <span className="font-mono font-medium text-stone-900">${order.subtotal}</span>
+                <span className="font-mono font-medium text-stone-900">{formatPrice(order.subtotal)}</span>
               </div>
               {order.discount > 0 && (
                 <div className="flex justify-between sm:justify-end sm:gap-6 text-amber-700">
                   <span>Discount ({order.couponCode}):</span>
-                  <span className="font-mono font-medium">-${order.discount}</span>
+                  <span className="font-mono font-medium">-{formatPrice(order.discount)}</span>
                 </div>
               )}
               <div className="flex justify-between sm:justify-end sm:gap-6">
                 <span>Shipping:</span>
                 <span className="font-mono font-medium text-stone-900">
-                  {order.shipping === 0 ? 'FREE' : `$${order.shipping}`}
+                  {order.shipping === 0 ? 'FREE' : formatPrice(order.shipping)}
                 </span>
               </div>
               <div className="flex justify-between sm:justify-end sm:gap-6 text-stone-400">
                 <span>Tax:</span>
-                <span className="font-mono">${order.tax}</span>
+                <span className="font-mono">{formatPrice(order.tax)}</span>
               </div>
               <div className="flex justify-between sm:justify-end sm:gap-6 text-base font-bold text-stone-950 pt-2 border-t border-stone-200">
                 <span>Total Paid:</span>
-                <span className="font-serif">${order.total}</span>
+                <span className="font-serif">{formatPrice(order.total)}</span>
               </div>
             </div>
           </div>

@@ -318,7 +318,7 @@ const INITIAL_COUPONS: Coupon[] = [
     discountValue: 10,
     minSpend: 40,
     isActive: true,
-    description: '$10 off your first order over $40',
+    description: '₹10 off your first order over ₹40',
     usageCount: 89
   },
   {
@@ -327,7 +327,7 @@ const INITIAL_COUPONS: Coupon[] = [
     discountValue: 7.99,
     minSpend: 50,
     isActive: true,
-    description: 'Free standard shipping on orders over $50',
+    description: 'Free standard shipping on orders over ₹50',
     usageCount: 215
   }
 ];
@@ -814,7 +814,7 @@ class Database {
       return { valid: false, error: 'Invalid or expired coupon code' };
     }
     if (subtotal < coupon.minSpend) {
-      return { valid: false, error: `Minimum order amount of $${coupon.minSpend} required for this coupon` };
+      return { valid: false, error: `Minimum order amount of ₹${coupon.minSpend} required for this coupon` };
     }
     return { valid: true, coupon };
   }

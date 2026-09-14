@@ -69,7 +69,8 @@ export const AdminDashboard: React.FC = () => {
     updateSettings,
     setCurrentView,
     showToast,
-    logoutAdmin
+    logoutAdmin,
+    formatPrice
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'categories' | 'coupons' | 'reviews' | 'settings'>('overview');
@@ -381,7 +382,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                     <div className="mt-4">
                       <span className="font-serif text-3xl font-bold text-stone-950">
-                        ${totalRevenue.toFixed(2)}
+                        {formatPrice(totalRevenue)}
                       </span>
                       <p className="text-[11px] text-emerald-700 font-medium mt-1">
                         +18.4% compared to last period
@@ -474,7 +475,7 @@ export const AdminDashboard: React.FC = () => {
                               {ord.items.length} print(s)
                             </td>
                             <td className="py-3 font-bold text-stone-900 font-mono">
-                              ${ord.total}
+                              {formatPrice(ord.total)}
                             </td>
                             <td className="py-3">
                               <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-full text-[10px] font-bold uppercase">
@@ -615,9 +616,9 @@ export const AdminDashboard: React.FC = () => {
                             </td>
                             <td className="py-3 text-stone-700">{prod.category}</td>
                             <td className="py-3">
-                              <div className="font-bold text-stone-900 font-mono">${prod.price}</div>
+                              <div className="font-bold text-stone-900 font-mono">{formatPrice(prod.price)}</div>
                               {prod.discountPrice && (
-                                <div className="text-[10px] text-amber-700 font-mono">Sale: ${prod.discountPrice}</div>
+                                <div className="text-[10px] text-amber-700 font-mono">Sale: {formatPrice(prod.discountPrice)}</div>
                               )}
                             </td>
                             <td className="py-3">
@@ -709,7 +710,7 @@ export const AdminDashboard: React.FC = () => {
                             {order.items.length} print(s)
                           </td>
                           <td className="py-3 font-bold font-mono text-stone-950">
-                            ${order.total}
+                            {formatPrice(order.total)}
                           </td>
                           <td className="py-3">
                             {order.status === 'Cancelled' ? (
@@ -889,11 +890,11 @@ export const AdminDashboard: React.FC = () => {
                         className="w-full p-2 bg-white border border-stone-300 rounded-lg"
                       >
                         <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Dollar ($)</option>
+                        <option value="fixed">Fixed Amount (₹)</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block font-medium text-stone-600 mb-1">Value ({newCouponType === 'percentage' ? '%' : '$'})</label>
+                      <label className="block font-medium text-stone-600 mb-1">Value ({newCouponType === 'percentage' ? '%' : '₹'})</label>
                       <input
                         type="number"
                         required
@@ -903,7 +904,7 @@ export const AdminDashboard: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-stone-600 mb-1">Min Order Amount ($)</label>
+                      <label className="block font-medium text-stone-600 mb-1">Min Order Amount (₹)</label>
                       <input
                         type="number"
                         value={newCouponMin}
@@ -938,9 +939,9 @@ export const AdminDashboard: React.FC = () => {
                         <tr key={c.id}>
                           <td className="py-3 font-mono font-bold text-stone-950">{c.code}</td>
                           <td className="py-3 font-medium">
-                            {c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `$${c.discountValue} OFF`}
+                            {c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}
                           </td>
-                          <td className="py-3 text-stone-600">${c.minOrderAmount}</td>
+                          <td className="py-3 text-stone-600">₹{c.minOrderAmount}</td>
                           <td className="py-3 text-stone-600">{c.usageCount} times</td>
                           <td className="py-3">
                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
@@ -1016,7 +1017,7 @@ export const AdminDashboard: React.FC = () => {
                     </p>
                   </div>
                   <span className="bg-amber-100 text-amber-900 text-[10px] font-bold font-mono px-2.5 py-1 rounded-full uppercase">
-                    Active: {settings.currency || 'USD'} ({settings.currencySymbol || '$'})
+                    Active: {settings.currency || 'INR'} ({settings.currencySymbol || '₹'})
                   </span>
                 </div>
 
@@ -1048,7 +1049,7 @@ export const AdminDashboard: React.FC = () => {
                         <label className="block text-stone-700 font-medium mb-1">Select Currency</label>
                         <select
                           id="admin-setting-currency-select"
-                          value={settings.currency || 'USD'}
+                          value={settings.currency || 'INR'}
                           onChange={(e) => {
                             const selected = CURRENCY_OPTIONS.find((c) => c.code === e.target.value);
                             if (selected) {
@@ -1075,7 +1076,7 @@ export const AdminDashboard: React.FC = () => {
                         <label className="block text-stone-700 font-medium mb-1">Currency Symbol</label>
                         <input
                           type="text"
-                          value={settings.currencySymbol || '$'}
+                          value={settings.currencySymbol || '₹'}
                           onChange={(e) => updateSettings({ currencySymbol: e.target.value })}
                           className="w-full p-2.5 bg-white border border-stone-300 rounded-lg font-mono font-bold text-center focus:outline-none focus:border-stone-900"
                         />
@@ -1123,18 +1124,18 @@ export const AdminDashboard: React.FC = () => {
                     <div className="p-3 bg-white rounded-xl border border-stone-200/90 text-[11px] text-stone-600 space-y-1">
                       <div className="font-semibold text-stone-900 flex justify-between">
                         <span>Poster Live Pricing Preview:</span>
-                        <span className="font-mono text-emerald-800">{settings.currency || 'USD'} Active</span>
+                        <span className="font-mono text-emerald-800">{settings.currency || 'INR'} Active</span>
                       </div>
                       <div className="flex justify-between font-mono">
-                        <span>Base Poster ($28.00):</span>
+                        <span>Base Poster (28.00 index):</span>
                         <span className="font-bold text-stone-950">
-                          {settings.currencySymbol || '$'}{(28 * (settings.currencyRate || 1.0)).toFixed(2)}
+                          {formatPrice(28)}
                         </span>
                       </div>
                       <div className="flex justify-between font-mono">
-                        <span>Solid Oak Frame (+$34.00):</span>
+                        <span>Solid Oak Frame (+34.00 index):</span>
                         <span className="font-bold text-stone-950">
-                          {settings.currencySymbol || '$'}{(34 * (settings.currencyRate || 1.0)).toFixed(2)}
+                          {formatPrice(34)}
                         </span>
                       </div>
                     </div>
@@ -1151,7 +1152,7 @@ export const AdminDashboard: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-stone-700 font-medium mb-1">Standard Shipping ({settings.currencySymbol || '$'})</label>
+                      <label className="block text-stone-700 font-medium mb-1">Standard Shipping ({settings.currencySymbol || '₹'})</label>
                       <input
                         type="number"
                         defaultValue={settings.shippingFlatRate}
@@ -1162,7 +1163,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-stone-700 font-medium mb-1">Free Shipping Threshold ({settings.currencySymbol || '$'})</label>
+                    <label className="block text-stone-700 font-medium mb-1">Free Shipping Threshold ({settings.currencySymbol || '₹'})</label>
                     <input
                       type="number"
                       defaultValue={settings.freeShippingThreshold}
@@ -1269,7 +1270,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-medium text-stone-700 mb-1">Base Price ($) *</label>
+                  <label className="block font-medium text-stone-700 mb-1">Base Price (₹) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1281,7 +1282,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-medium text-stone-700 mb-1">Discount Price (Optional $)</label>
+                  <label className="block font-medium text-stone-700 mb-1">Discount Price (Optional ₹)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1460,7 +1461,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="text-[11px] text-stone-500">{it.sizeName} • {it.frameName}</div>
                     <div className="text-[11px] text-stone-400">Qty: {it.quantity}</div>
                   </div>
-                  <div className="font-mono font-bold text-stone-900">${it.totalPrice}</div>
+                  <div className="font-mono font-bold text-stone-900">{formatPrice(it.totalPrice)}</div>
                 </div>
               ))}
             </div>
@@ -1483,7 +1484,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="pt-2 border-t border-rose-200/80 flex items-center justify-between text-[11px] font-semibold">
                   <span className="text-emerald-800 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
-                    Payment Refunded (${viewingOrder.total})
+                    Payment Refunded ({formatPrice(viewingOrder.total)})
                   </span>
                   <span className="text-stone-500">Method: {viewingOrder.paymentMethod}</span>
                 </div>
@@ -1630,7 +1631,7 @@ export const AdminDashboard: React.FC = () => {
                     <div>
                       <div className="font-medium">Set All Posters to Exact Fixed Base Price</div>
                       <div className="text-[10px] text-stone-500">
-                        Every single poster's base price will immediately be updated to this amount (e.g., $35.00)
+                        Every single poster's base price will immediately be updated to this amount (e.g., ₹2,500)
                       </div>
                     </div>
                   </label>
@@ -1672,9 +1673,9 @@ export const AdminDashboard: React.FC = () => {
                       className="accent-stone-900"
                     />
                     <div>
-                      <div className="font-medium">Adjust by Fixed Dollar Amount ($)</div>
+                      <div className="font-medium">Adjust by Fixed Rupee Amount (₹)</div>
                       <div className="text-[10px] text-stone-500">
-                        Add or subtract a fixed dollar amount across every poster (e.g., 5 for +$5.00)
+                        Add or subtract a fixed rupee amount across every poster (e.g., 500 for +₹500)
                       </div>
                     </div>
                   </label>
@@ -1684,13 +1685,13 @@ export const AdminDashboard: React.FC = () => {
               {/* Value Input */}
               <div>
                 <label className="block font-medium text-stone-800 mb-1">
-                  {bulkPriceAction === 'set_all' && 'New Base Price For All Posters ($ USD) *'}
+                  {bulkPriceAction === 'set_all' && 'New Base Price For All Posters (₹ INR) *'}
                   {bulkPriceAction === 'adjust_percent' && 'Percentage Change (% e.g., 10 for +10% or -10 for discount) *'}
-                  {bulkPriceAction === 'adjust_fixed' && 'Dollar Amount Change ($ e.g., 5.00 or -5.00) *'}
+                  {bulkPriceAction === 'adjust_fixed' && 'Rupee Amount Change (₹ e.g., 500 or -500) *'}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-stone-400">
-                    {bulkPriceAction === 'adjust_percent' ? '%' : '$'}
+                    {bulkPriceAction === 'adjust_percent' ? '%' : '₹'}
                   </span>
                   <input
                     type="number"
@@ -1698,13 +1699,13 @@ export const AdminDashboard: React.FC = () => {
                     required
                     value={bulkPriceValue}
                     onChange={(e) => setBulkPriceValue(e.target.value)}
-                    placeholder={bulkPriceAction === 'set_all' ? '35.00' : '10'}
+                    placeholder={bulkPriceAction === 'set_all' ? '2500' : '10'}
                     className="w-full pl-8 pr-4 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-stone-900 font-mono text-sm font-bold text-stone-900"
                   />
                 </div>
                 {bulkPriceAction === 'set_all' && (
                   <p className="text-[11px] text-stone-500 mt-1.5">
-                    Example: Setting to <span className="font-mono font-semibold text-stone-800">$35.00</span> will set all {products.length} posters in the store to $35.00 base price.
+                    Example: Setting to <span className="font-mono font-semibold text-stone-800">₹2,500</span> will set all {products.length} posters in the store to ₹2,500 base price.
                   </p>
                 )}
               </div>

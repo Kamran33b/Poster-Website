@@ -89,7 +89,7 @@ export const AIChatBubble: React.FC = () => {
       const fallbackMsg: ChatMessage = {
         id: `ai-err-${Date.now()}`,
         role: 'assistant',
-        text: "🚚 **Shipping:** 3-5 business days (Free over $100).\n🖼️ **Frames:** Solid Oak, Matte Black, White Wood with 92% UV protection glass.\n🎨 **Paper:** 250 GSM archival giclée matte paper.",
+        text: "🚚 **Shipping:** 3-5 business days (Free over ₹5,000).\n🖼️ **Frames:** Solid Oak, Matte Black, White Wood with 92% UV protection glass.\n🎨 **Paper:** 250 GSM archival giclée matte paper.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, fallbackMsg]);

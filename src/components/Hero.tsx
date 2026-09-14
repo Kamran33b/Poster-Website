@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext';
 import { ArrowRight, Sparkles, ShieldCheck, Truck, Award, Palette } from 'lucide-react';
 
 export const Hero: React.FC = () => {
-  const { setCurrentView, setSelectedProductId } = useStore();
+  const { setCurrentView, setSelectedProductId, formatPrice } = useStore();
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#faf8f5] via-[#f5f1ea] to-[#faf8f5] pt-8 pb-16 lg:pt-14 lg:pb-24 border-b border-stone-200/80">
@@ -65,7 +65,7 @@ export const Hero: React.FC = () => {
               </div>
               <div className="flex items-center gap-2.5">
                 <Truck className="w-4 h-4 text-amber-700 shrink-0" />
-                <span className="text-xs text-stone-700 font-medium">Free Shipping &gt;$75</span>
+                <span className="text-xs text-stone-700 font-medium">Free Shipping &gt;{formatPrice(75)}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Award className="w-4 h-4 text-amber-700 shrink-0" />
@@ -136,7 +136,7 @@ export const Hero: React.FC = () => {
                 {/* Floating Tag */}
                 <div className="absolute -bottom-3 -right-3 bg-amber-500 text-stone-950 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 border-2 border-white">
                   <Palette className="w-3.5 h-3.5" />
-                  <span>Best Seller • $28</span>
+                  <span>Best Seller • {formatPrice(28)}</span>
                 </div>
               </div>
             </div>

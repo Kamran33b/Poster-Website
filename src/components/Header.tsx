@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { 
   Search, 
@@ -15,6 +17,62 @@ import {
   Tag,
   Lock
 } from 'lucide-react';
+
+interface SlidingMenuButtonProps {
+  isOpen: boolean;
+  onClick: () => void;
+}
+
+const SlidingMenuButton: React.FC<SlidingMenuButtonProps> = ({ isOpen, onClick }) => {
+  return (
+    <motion.button
+      id="mobile-menu-toggle"
+      type="button"
+      onClick={onClick}
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.94 }}
+      className="lg:hidden relative flex items-center gap-2.5 px-3 py-2 rounded-xl bg-stone-100/90 hover:bg-stone-200 text-stone-900 border border-stone-300/80 transition-colors focus:outline-none shadow-2xs group cursor-pointer"
+      aria-label="Toggle Navigation Menu"
+    >
+      <div className="w-5 h-4 relative flex flex-col justify-between items-center overflow-hidden py-0.5">
+        {/* Top Hamburger Line */}
+        <motion.span
+          animate={isOpen ? { rotate: 45, y: 6.5 } : { rotate: 0, y: 0 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+          className="w-5 h-0.5 bg-stone-900 rounded-full origin-center block"
+        />
+        {/* Middle Hamburger Line - slides out right */}
+        <motion.span
+          animate={isOpen ? { x: 24, opacity: 0 } : { x: 0, opacity: 1 }}
+          transition={{ duration: 0.18, ease: 'easeInOut' }}
+          className="w-5 h-0.5 bg-stone-900 rounded-full block"
+        />
+        {/* Bottom Hamburger Line */}
+        <motion.span
+          animate={isOpen ? { rotate: -45, y: -6.5 } : { rotate: 0, y: 0 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+          className="w-5 h-0.5 bg-stone-900 rounded-full origin-center block"
+        />
+      </div>
+
+      {/* Sliding Text Label */}
+      <div className="relative h-4 overflow-hidden w-11 flex items-center">
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={isOpen ? 'close' : 'menu'}
+            initial={{ y: isOpen ? 12 : -12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: isOpen ? -12 : 12, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="absolute left-0 text-[11px] font-bold uppercase tracking-wider text-stone-900 font-mono"
+          >
+            {isOpen ? 'Close' : 'Menu'}
+          </motion.span>
+        </AnimatePresence>
+      </div>
+    </motion.button>
+  );
+};
 
 export const Header: React.FC = () => {
   const {
@@ -34,7 +92,8 @@ export const Header: React.FC = () => {
     isAdminAuthenticated,
     setIsAdminAuthenticated,
     openAdminPortal,
-    logoutAdmin
+    logoutAdmin,
+    formatPrice
   } = useStore();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -75,7 +134,7 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#faf8f5]/95 backdrop-blur-md border-b border-stone-200 transition-all">
+    <header className={`sticky top-0 ${isMobileMenuOpen ? 'z-[99999]' : 'z-50'} bg-[#faf8f5]/95 backdrop-blur-md border-b border-stone-200 transition-all`}>
       {/* Top Banner with smooth left-to-right loop animation */}
       <div className="bg-stone-900 text-stone-300 text-xs py-1.5 overflow-hidden relative w-full border-b border-stone-800">
         <div className="animate-banner-scroll items-center gap-4 text-xs font-medium tracking-wide">
@@ -97,15 +156,10 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Left: Mobile Menu Trigger & Logo */}
         <div className="flex items-center gap-4">
-          <button
-            id="mobile-menu-toggle"
-            type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-stone-700 hover:text-stone-900"
-            aria-label="Toggle Navigation Menu"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <SlidingMenuButton 
+            isOpen={isMobileMenuOpen} 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+          />
 
           {/* Brand Logo */}
           <button
@@ -306,11 +360,11 @@ export const Header: React.FC = () => {
                           <p className="text-[11px] text-stone-500 truncate">{prod.category}</p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs font-bold text-stone-950">
-                              ${prod.discountPrice || prod.price}
+                              {formatPrice(prod.discountPrice || prod.price)}
                             </span>
                             {prod.discountPrice && (
                               <span className="text-[10px] text-stone-400 line-through">
-                                ${prod.price}
+                                {formatPrice(prod.price)}
                               </span>
                             )}
                           </div>
@@ -417,81 +471,161 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-stone-200 px-4 py-5 space-y-4 shadow-xl">
-          <div className="flex flex-col space-y-3">
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView('home');
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-left font-medium text-stone-900 py-1"
-            >
-              Home
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategory('All');
-                setCurrentView('shop');
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-left font-medium text-stone-900 py-1"
-            >
-              Shop All Artworks
-            </button>
-            <div className="pl-3 border-l-2 border-stone-200 space-y-2 py-1">
-              <div className="text-xs font-bold text-stone-400 uppercase tracking-wider">Collections</div>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleSelectCategory(cat.name)}
-                  className="block text-left text-sm text-stone-600 hover:text-stone-950 py-0.5"
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView('account');
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-left font-medium text-stone-900 py-1 flex items-center justify-between"
-            >
-              <span>My Account & Orders</span>
-              <User className="w-4 h-4 text-stone-400" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView('account');
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-left font-medium text-stone-900 py-1 flex items-center justify-between"
-            >
-              <span>Saved Wishlist ({wishlist.length})</span>
-              <Heart className="w-4 h-4 text-stone-400" />
-            </button>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  openAdminPortal();
-                }}
-                className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-xs font-semibold text-center flex items-center justify-center gap-2"
+      {/* Mobile Drawer Overlay & Sliding Panel mounted via Portal directly to body */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="lg:hidden fixed inset-0 bg-stone-950/60 backdrop-blur-md z-[999998]"
+              />
+
+              {/* Sliding Menu Panel */}
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                className="lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white z-[999999] overflow-y-auto shadow-2xl flex flex-col justify-between border-r border-stone-200"
               >
-                <Lock className="w-4 h-4 text-amber-400" />
-                <span>Open Admin Portal</span>
-              </button>
-            </div>
-          </div>
-        </div>
+                <div className="p-5 space-y-6">
+                  {/* Header inside drawer */}
+                  <div className="flex items-center justify-between pb-4 border-b border-stone-100">
+                    <div className="flex flex-col">
+                      <span className="font-display text-xl font-bold tracking-[0.2em] text-stone-950">
+                        LUMINA
+                      </span>
+                      <span className="text-[9px] uppercase font-semibold tracking-[0.3em] text-stone-400">
+                        Fine Art Posters
+                      </span>
+                    </div>
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="p-1.5 rounded-lg bg-stone-100 text-stone-600 hover:text-stone-900"
+                    >
+                      <X className="w-5 h-5" />
+                    </motion.button>
+                  </div>
+
+                  {/* Staggered Navigation Items */}
+                  <div className="flex flex-col space-y-3 font-medium">
+                    <motion.button
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.05 }}
+                      type="button"
+                      onClick={() => {
+                        setCurrentView('home');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-left font-semibold text-stone-900 py-2 border-b border-stone-100 flex items-center justify-between group"
+                    >
+                      <span className="group-hover:translate-x-1 transition-transform">Home</span>
+                      <ArrowRight className="w-4 h-4 text-stone-300 group-hover:text-stone-700" />
+                    </motion.button>
+
+                    <motion.button
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.08 }}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory('All');
+                        setCurrentView('shop');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-left font-semibold text-stone-900 py-2 border-b border-stone-100 flex items-center justify-between group"
+                    >
+                      <span className="group-hover:translate-x-1 transition-transform">Shop All Artworks</span>
+                      <ArrowRight className="w-4 h-4 text-stone-300 group-hover:text-stone-700" />
+                    </motion.button>
+
+                    {/* Collections List */}
+                    <motion.div 
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.11 }}
+                      className="pl-3 border-l-2 border-amber-800/20 space-y-2.5 py-2 my-1 bg-stone-50/60 rounded-r-xl pr-2"
+                    >
+                      <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Poster Collections</div>
+                      {categories.map((cat, idx) => (
+                        <motion.button
+                          key={cat.id}
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: 0.12 + idx * 0.03 }}
+                          type="button"
+                          onClick={() => handleSelectCategory(cat.name)}
+                          className="block w-full text-left text-xs text-stone-700 hover:text-amber-800 font-medium py-1 transition-colors flex items-center justify-between"
+                        >
+                          <span>{cat.name}</span>
+                          <span className="text-[10px] text-stone-400 font-mono">
+                            {products.filter((p) => p.category === cat.name).length}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </motion.div>
+
+                    <motion.button
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.18 }}
+                      type="button"
+                      onClick={() => {
+                        setCurrentView('account');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-left font-semibold text-stone-900 py-2 border-b border-stone-100 flex items-center justify-between group"
+                    >
+                      <span className="group-hover:translate-x-1 transition-transform">My Account & Orders</span>
+                      <User className="w-4 h-4 text-stone-400" />
+                    </motion.button>
+
+                    <motion.button
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.21 }}
+                      type="button"
+                      onClick={() => {
+                        setCurrentView('account');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-left font-semibold text-stone-900 py-2 flex items-center justify-between group"
+                    >
+                      <span className="group-hover:translate-x-1 transition-transform">Saved Wishlist ({wishlist.length})</span>
+                      <Heart className="w-4 h-4 text-stone-400" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Bottom Drawer Actions */}
+                <div className="p-5 border-t border-stone-100 bg-stone-50/80 space-y-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      openAdminPortal();
+                    }}
+                    className="w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold text-center flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>Open Admin Portal</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
     </header>
   );
