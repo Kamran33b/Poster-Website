@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { 
@@ -119,48 +120,54 @@ export const ShopPage: React.FC = () => {
 
             {/* Quick Collections Tabs */}
             <div className="flex items-center gap-1.5 bg-stone-200/60 p-1 rounded-xl self-start">
-              <button
+              <motion.button
                 type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setShopFilterTab('all');
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold select-none cursor-pointer transition-all ${
                   shopFilterTab === 'all'
                     ? 'bg-white text-stone-950 shadow-sm'
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 All
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setShopFilterTab('best-sellers');
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold select-none cursor-pointer transition-all ${
                   shopFilterTab === 'best-sellers'
                     ? 'bg-white text-stone-950 shadow-sm'
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 Best Sellers
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setShopFilterTab('new-arrivals');
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold select-none cursor-pointer transition-all ${
                   shopFilterTab === 'new-arrivals'
                     ? 'bg-white text-stone-950 shadow-sm'
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 New Arrivals
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -255,13 +262,16 @@ export const ShopPage: React.FC = () => {
                 Art Category
               </h4>
               <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
-                <button
+                <motion.button
                   type="button"
+                  whileHover={{ x: 4, backgroundColor: selectedCategory === 'All' ? '#1c1917' : '#f5f5f4' }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   onClick={() => {
                     setSelectedCategory('All');
                     setCurrentPage(1);
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
+                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium select-none cursor-pointer transition-colors flex items-center justify-between ${
                     selectedCategory === 'All'
                       ? 'bg-stone-900 text-white font-semibold'
                       : 'text-stone-700 hover:bg-stone-100'
@@ -271,19 +281,22 @@ export const ShopPage: React.FC = () => {
                   <span className={selectedCategory === 'All' ? 'text-stone-300' : 'text-stone-400'}>
                     {products.length}
                   </span>
-                </button>
+                </motion.button>
                 {categories.map((cat) => {
                   const count = products.filter((p) => p.category === cat.name).length;
                   const isSelected = selectedCategory === cat.name;
                   return (
-                    <button
+                    <motion.button
                       key={cat.id}
                       type="button"
+                      whileHover={{ x: 4, backgroundColor: isSelected ? '#1c1917' : '#f5f5f4' }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       onClick={() => {
                         setSelectedCategory(cat.name);
                         setCurrentPage(1);
                       }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium select-none cursor-pointer transition-colors flex items-center justify-between ${
                         isSelected
                           ? 'bg-stone-900 text-white font-semibold'
                           : 'text-stone-700 hover:bg-stone-100'
@@ -293,7 +306,7 @@ export const ShopPage: React.FC = () => {
                       <span className={isSelected ? 'text-stone-300' : 'text-stone-400'}>
                         {count}
                       </span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -339,21 +352,24 @@ export const ShopPage: React.FC = () => {
                   { id: '50 × 70', label: 'Medium (50 × 70 cm / 20×28″)' },
                   { id: '70 × 100', label: 'Gallery (70 × 100 cm / 28×40″)' }
                 ].map((s) => (
-                  <button
+                  <motion.button
                     key={s.id}
                     type="button"
+                    whileHover={{ scale: 1.01, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     onClick={() => {
                       setSelectedSizeFilter(s.id);
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-2 rounded-lg text-left transition-colors font-medium ${
+                    className={`px-3 py-2 rounded-lg text-left select-none cursor-pointer transition-colors font-medium ${
                       selectedSizeFilter === s.id
                         ? 'bg-amber-100 text-amber-950 font-bold border border-amber-300'
                         : 'bg-stone-50 text-stone-700 hover:bg-stone-100 border border-stone-200'
                     }`}
                   >
                     {s.label}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>

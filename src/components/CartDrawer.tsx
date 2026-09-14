@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { 
   X, 
@@ -125,16 +126,19 @@ export const CartDrawer: React.FC = () => {
                 <p className="text-xs text-stone-500 max-w-xs mb-6">
                   Discover curated architectural prints, botanicals, and Japanese woodblock masterpieces.
                 </p>
-                <button
+                <motion.button
                   type="button"
+                  whileHover={{ scale: 1.05, backgroundColor: '#1c1917' }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   onClick={() => {
                     setIsCartOpen(false);
                     setCurrentView('shop');
                   }}
-                  className="px-6 py-3 bg-stone-900 text-white rounded-xl text-xs font-semibold hover:bg-stone-800 transition-colors"
+                  className="px-6 py-3 bg-stone-900 text-white rounded-xl text-xs font-semibold select-none cursor-pointer"
                 >
                   Explore Poster Gallery
-                </button>
+                </motion.button>
               </div>
             ) : (
               cart.map((item) => (

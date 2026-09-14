@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { ArrowRight, Sparkles, ShieldCheck, Truck, Award, Palette } from 'lucide-react';
 
@@ -34,27 +35,47 @@ export const Hero: React.FC = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center gap-4 pt-2 w-full sm:w-auto">
-              <button
+              <motion.button
                 id="hero-shop-now-btn"
                 type="button"
+                whileHover="hover"
+                whileTap="tap"
+                initial="initial"
+                variants={{
+                  initial: { scale: 1 },
+                  hover: { scale: 1.03, backgroundColor: '#1c1917', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2)' },
+                  tap: { scale: 0.97 }
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 onClick={() => setCurrentView('shop')}
-                className="w-full sm:w-auto px-8 py-4 bg-stone-950 hover:bg-stone-800 text-white font-medium text-sm rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2.5 transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
+                className="w-full sm:w-auto px-8 py-4 bg-stone-950 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2.5 transition-all duration-200 cursor-pointer"
               >
                 <span>Explore Shop</span>
-                <ArrowRight className="w-4 h-4 text-amber-400" />
-              </button>
+                <motion.span
+                  variants={{
+                    initial: { x: 0 },
+                    hover: { x: 5 }
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                >
+                  <ArrowRight className="w-4 h-4 text-amber-400" />
+                </motion.span>
+              </motion.button>
 
-              <button
+              <motion.button
                 id="hero-view-bestsellers-btn"
                 type="button"
+                whileHover={{ scale: 1.03, backgroundColor: '#f5f5f4' }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 onClick={() => {
                   setSelectedProductId('prod-01');
                   setCurrentView('product-detail');
                 }}
-                className="w-full sm:w-auto px-6 py-4 bg-white hover:bg-stone-100 text-stone-800 font-medium text-sm rounded-xl border border-stone-300 shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full sm:w-auto px-6 py-4 bg-white text-stone-800 font-medium text-sm rounded-xl border border-stone-300 shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <span>Featured Print: Bauhaus Form</span>
-              </button>
+              </motion.button>
             </div>
 
             {/* Micro Guarantees */}

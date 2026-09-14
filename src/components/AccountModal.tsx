@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { 
   User, 
@@ -977,13 +978,16 @@ export const AccountModal: React.FC = () => {
                 <Heart className="w-12 h-12 text-stone-300 mx-auto mb-3" />
                 <h3 className="font-serif text-lg font-semibold text-stone-900 mb-1">Your wishlist is empty</h3>
                 <p className="text-xs text-stone-500 mb-6">Heart any poster across the catalog to save it to your curation.</p>
-                <button
+                <motion.button
                   type="button"
+                  whileHover={{ scale: 1.05, backgroundColor: '#1c1917' }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   onClick={() => setCurrentView('shop')}
-                  className="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold"
+                  className="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold select-none cursor-pointer"
                 >
                   Explore Collection
-                </button>
+                </motion.button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

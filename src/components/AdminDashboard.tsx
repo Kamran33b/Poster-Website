@@ -152,11 +152,12 @@ export const AdminDashboard: React.FC = () => {
   const lowStockProducts = products.filter((p) => p.stock < 15);
 
   const handleOpenAddProduct = () => {
+    const rate = settings.currencyRate ?? 1.0;
     setEditingProductId(null);
     setProdName('');
     setProdCategory(categories[0]?.name || 'Bauhaus & Geometry');
     setProdCollection('Curator Archive');
-    setProdPrice('36');
+    setProdPrice(Math.round(36 * rate).toString());
     setProdDiscountPrice('');
     setProdStock('50');
     setProdDescription('Archival 200 gsm fine art paper physical poster. Rich mineral pigments with non-reflective matte finish.');
@@ -169,12 +170,13 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleOpenEditProduct = (prod: Product) => {
+    const rate = settings.currencyRate ?? 1.0;
     setEditingProductId(prod.id);
     setProdName(prod.name);
     setProdCategory(prod.category);
     setProdCollection(prod.collection);
-    setProdPrice(prod.price.toString());
-    setProdDiscountPrice(prod.discountPrice ? prod.discountPrice.toString() : '');
+    setProdPrice(Math.round(prod.price * rate).toString());
+    setProdDiscountPrice(prod.discountPrice ? Math.round(prod.discountPrice * rate).toString() : '');
     setProdStock(prod.stock.toString());
     setProdDescription(prod.description);
     setProdImageUrl(prod.images[0] || '');
@@ -204,13 +206,17 @@ export const AdminDashboard: React.FC = () => {
       { id: 'f-brass', name: 'Brushed Brass Metal', material: 'Electroplated Anodized Brass', price: 42, colorHex: '#c5a059', borderStyle: 'border-amber-600' }
     ];
 
+    const rate = settings.currencyRate ?? 1.0;
+    const dbPrice = parseFloat(prodPrice) / rate;
+    const dbDiscountPrice = prodDiscountPrice ? parseFloat(prodDiscountPrice) / rate : undefined;
+
     if (editingProductId) {
       await updateProduct(editingProductId, {
         name: prodName,
         category: prodCategory,
         collection: prodCollection,
-        price: parseFloat(prodPrice),
-        discountPrice: prodDiscountPrice ? parseFloat(prodDiscountPrice) : undefined,
+        price: parseFloat(dbPrice.toFixed(2)),
+        discountPrice: dbDiscountPrice ? parseFloat(dbDiscountPrice.toFixed(2)) : undefined,
         stock: parseInt(prodStock, 10),
         description: prodDescription,
         images: imagesArray,
@@ -226,8 +232,8 @@ export const AdminDashboard: React.FC = () => {
         name: prodName,
         category: prodCategory,
         collection: prodCollection,
-        price: parseFloat(prodPrice),
-        discountPrice: prodDiscountPrice ? parseFloat(prodDiscountPrice) : undefined,
+        price: parseFloat(dbPrice.toFixed(2)),
+        discountPrice: dbDiscountPrice ? parseFloat(dbDiscountPrice.toFixed(2)) : undefined,
         stock: parseInt(prodStock, 10),
         description: prodDescription,
         images: imagesArray,
@@ -1598,7 +1604,11 @@ export const AdminDashboard: React.FC = () => {
                 }
                 setIsSubmittingBulkPrice(true);
                 try {
-                  await bulkUpdatePrices(bulkPriceAction, numericVal);
+                  const rate = settings.currencyRate ?? 1.0;
+                  const valueToSend = (bulkPriceAction === 'set_all' || bulkPriceAction === 'adjust_fixed')
+                    ? numericVal / rate
+                    : numericVal;
+                  await bulkUpdatePrices(bulkPriceAction, valueToSend);
                   setShowBulkPriceModal(false);
                 } catch {
                   showToast('Failed to update prices');

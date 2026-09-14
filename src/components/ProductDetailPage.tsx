@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { 
@@ -447,11 +448,14 @@ export const ProductDetailPage: React.FC = () => {
                   const isSelected = selectedSize.id === sz.id;
                   const szUnitPrice = basePrice * sz.priceMultiplier + selectedFrame.price;
                   return (
-                    <button
+                    <motion.button
                       key={sz.id}
                       type="button"
+                      whileHover={{ scale: 1.04, y: -2 }}
+                      whileTap={{ scale: 0.96 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       onClick={() => setSelectedSize(sz)}
-                      className={`p-2 rounded-xl text-center border transition-all ${
+                      className={`p-2 rounded-xl text-center border cursor-pointer select-none transition-colors ${
                         isSelected
                           ? 'border-stone-950 bg-stone-950 text-white shadow-md'
                           : 'border-stone-200 bg-stone-50 hover:bg-white hover:border-stone-300 text-stone-800'
@@ -461,7 +465,7 @@ export const ProductDetailPage: React.FC = () => {
                       <div className={`text-[10px] mt-0.5 font-mono ${isSelected ? 'text-amber-300' : 'text-stone-500'}`}>
                         {formatPrice(szUnitPrice)}
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -482,11 +486,14 @@ export const ProductDetailPage: React.FC = () => {
                 {product.frameOptions.map((frame) => {
                   const isSelected = selectedFrame.id === frame.id;
                   return (
-                    <button
+                    <motion.button
                       key={frame.id}
                       type="button"
+                      whileHover={{ scale: 1.02, x: 2 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       onClick={() => setSelectedFrame(frame)}
-                      className={`p-2.5 rounded-xl text-left border flex items-center gap-3 transition-all ${
+                      className={`p-2.5 rounded-xl text-left border flex items-center gap-3 cursor-pointer select-none transition-colors ${
                         isSelected
                           ? 'border-amber-600 bg-amber-50/70 ring-1 ring-amber-600 shadow-sm'
                           : 'border-stone-200 bg-white hover:border-stone-300'
@@ -506,7 +513,7 @@ export const ProductDetailPage: React.FC = () => {
                         </div>
                       </div>
                       {isSelected && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>

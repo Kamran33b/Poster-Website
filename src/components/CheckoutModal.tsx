@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { 
   Lock, 
@@ -185,13 +186,16 @@ export const CheckoutModal: React.FC = () => {
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <h2 className="font-serif text-2xl text-stone-900 mb-2">Your Cart is Empty</h2>
         <p className="text-xs text-stone-500 mb-6">Add physical posters to proceed with checkout.</p>
-        <button
+        <motion.button
           type="button"
+          whileHover={{ scale: 1.05, backgroundColor: '#1c1917' }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
           onClick={() => setCurrentView('shop')}
-          className="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold"
+          className="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold select-none cursor-pointer"
         >
           Explore Gallery
-        </button>
+        </motion.button>
       </div>
     );
   }
@@ -743,10 +747,13 @@ export const CheckoutModal: React.FC = () => {
                     Select Shipping Care Option
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       onClick={() => setShippingMethod('standard')}
-                      className={`p-3.5 rounded-xl text-left border flex items-start justify-between transition-all ${
+                      className={`p-3.5 rounded-xl text-left border flex items-start justify-between cursor-pointer select-none transition-colors ${
                         shippingMethod === 'standard'
                           ? 'border-stone-950 bg-stone-50 ring-1 ring-stone-950'
                           : 'border-stone-200 hover:border-stone-300'
@@ -763,12 +770,15 @@ export const CheckoutModal: React.FC = () => {
                       <span className="text-xs font-bold text-stone-900">
                         {shippingCost === 0 ? 'FREE' : formatPrice(shippingCost)}
                       </span>
-                    </button>
+                    </motion.button>
 
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       onClick={() => setShippingMethod('express')}
-                      className={`p-3.5 rounded-xl text-left border flex items-start justify-between transition-all ${
+                      className={`p-3.5 rounded-xl text-left border flex items-start justify-between cursor-pointer select-none transition-colors ${
                         shippingMethod === 'express'
                           ? 'border-amber-600 bg-amber-50/60 ring-1 ring-amber-600'
                           : 'border-stone-200 hover:border-stone-300'
@@ -786,7 +796,7 @@ export const CheckoutModal: React.FC = () => {
                       <span className="text-xs font-bold text-stone-900">
                         +{formatPrice(12)}
                       </span>
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
@@ -840,7 +850,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
 
                 {/* Payment Gateway Method Tabs */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
                   {[
                     { id: 'Credit / Debit Card', label: 'Credit Card', icon: CreditCard },
                     { id: 'UPI', label: 'UPI / QR', icon: QrCode, badge: 'Popular' },
@@ -850,11 +860,14 @@ export const CheckoutModal: React.FC = () => {
                     const Icon = m.icon;
                     const isSelected = paymentMethod === m.id;
                     return (
-                      <button
+                      <motion.button
                         key={m.id}
                         type="button"
+                        whileHover={{ scale: 1.04, y: -2 }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                         onClick={() => setPaymentMethod(m.id as any)}
-                        className={`relative p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                        className={`relative p-3 rounded-xl border flex flex-col items-center gap-1.5 cursor-pointer select-none transition-colors ${
                           isSelected
                             ? 'border-stone-950 bg-stone-900 text-white shadow-md'
                             : 'border-stone-200 bg-stone-50 hover:bg-white text-stone-700'
@@ -867,7 +880,7 @@ export const CheckoutModal: React.FC = () => {
                         )}
                         <Icon className="w-4 h-4" />
                         <span className="font-semibold text-[11px]">{m.label}</span>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>

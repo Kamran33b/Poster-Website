@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { ArrowRight, Flame } from 'lucide-react';
@@ -31,15 +32,26 @@ export const BestSellersSection: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <motion.button
           id="view-all-bestsellers-btn"
           type="button"
+          whileHover="hover"
+          whileTap="tap"
+          initial="initial"
           onClick={handleViewAllBestSellers}
-          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-900 hover:text-amber-700 transition-colors group cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-900 hover:text-amber-700 select-none cursor-pointer self-start sm:self-auto"
         >
           <span>Explore All Best Sellers</span>
-          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-        </button>
+          <motion.span
+            variants={{
+              initial: { x: 0 },
+              hover: { x: 4 }
+            }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          >
+            <ArrowRight className="w-4 h-4" />
+          </motion.span>
+        </motion.button>
       </div>
 
       {/* Grid */}
