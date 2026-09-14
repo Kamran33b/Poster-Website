@@ -71,10 +71,10 @@ const STANDARD_SIZES = [
 
 const STANDARD_FRAMES = [
   { id: 'f-none', name: 'Print Only (Unframed)', material: 'Archival 200gsm Matte Paper', price: 0, colorHex: '#e5e5e5', borderStyle: 'border-transparent' },
-  { id: 'f-oak', name: 'Solid Natural Oak', material: 'FSC-Certified Solid European Oak', price: 34, colorHex: '#c29b68', borderStyle: 'border-[#a67c44]' },
-  { id: 'f-black', name: 'Matte Black Aluminum', material: 'Slim Anodized Aluminum with Glass', price: 26, colorHex: '#18181b', borderStyle: 'border-[#18181b]' },
-  { id: 'f-white', name: 'Clean White Wood', material: 'Satin Finish Solid Ash Wood', price: 26, colorHex: '#ffffff', borderStyle: 'border-[#d4d4d8]' },
-  { id: 'f-brass', name: 'Brushed Brass Metal', material: 'Electroplated Brushed Brass Edge', price: 38, colorHex: '#d4af37', borderStyle: 'border-[#b8972e]' }
+  { id: 'f-oak', name: 'Solid Natural Oak', material: 'FSC-Certified Solid European Oak', price: 1499, colorHex: '#c29b68', borderStyle: 'border-[#a67c44]' },
+  { id: 'f-black', name: 'Matte Black Aluminum', material: 'Slim Anodized Aluminum with Glass', price: 1199, colorHex: '#18181b', borderStyle: 'border-[#18181b]' },
+  { id: 'f-white', name: 'Clean White Wood', material: 'Satin Finish Solid Ash Wood', price: 1199, colorHex: '#ffffff', borderStyle: 'border-[#d4d4d8]' },
+  { id: 'f-brass', name: 'Brushed Brass Metal', material: 'Electroplated Brushed Brass Edge', price: 1799, colorHex: '#d4af37', borderStyle: 'border-[#b8972e]' }
 ];
 
 const INITIAL_PRODUCTS: Product[] = [

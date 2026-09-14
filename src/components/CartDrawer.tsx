@@ -25,7 +25,9 @@ export const CartDrawer: React.FC = () => {
     discountAmount,
     shippingCost,
     cartTotal,
-    setCurrentView
+    setCurrentView,
+    formatPrice,
+    settings
   } = useStore();
 
   const [couponCodeInput, setCouponCodeInput] = useState('');
@@ -52,7 +54,7 @@ export const CartDrawer: React.FC = () => {
     setCurrentView('checkout');
   };
 
-  const freeShippingThreshold = 75;
+  const freeShippingThreshold = settings.freeShippingThreshold || 2999;
   const progressToFreeShipping = Math.min(100, Math.round((cartSubtotal / freeShippingThreshold) * 100));
   const remainingForFreeShipping = Math.max(0, parseFloat((freeShippingThreshold - cartSubtotal).toFixed(2)));
 
@@ -92,7 +94,7 @@ export const CartDrawer: React.FC = () => {
             {remainingForFreeShipping > 0 ? (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-amber-900 font-medium">
-                  <span>Add <strong>${remainingForFreeShipping}</strong> more for free museum shipping</span>
+                  <span>Add <strong>{formatPrice(remainingForFreeShipping)}</strong> more for free museum shipping</span>
                   <Truck className="w-4 h-4 text-amber-700" />
                 </div>
                 <div className="w-full h-1.5 bg-amber-200 rounded-full overflow-hidden">
@@ -181,7 +183,7 @@ export const CartDrawer: React.FC = () => {
 
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-stone-950 font-mono">
-                          ${(item.unitPrice * item.quantity).toFixed(2)}
+                          {formatPrice(item.unitPrice * item.quantity)}
                         </span>
                         <button
                           type="button"
@@ -251,31 +253,31 @@ export const CartDrawer: React.FC = () => {
               <div className="space-y-1.5 text-xs text-stone-600 pt-2 border-t border-stone-100">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-medium text-stone-900 font-mono">${cartSubtotal}</span>
+                  <span className="font-medium text-stone-900 font-mono">{formatPrice(cartSubtotal)}</span>
                 </div>
                 {appliedCoupon && (
                   <div className="flex justify-between text-amber-700">
                     <span>Discount ({appliedCoupon.code})</span>
-                    <span className="font-medium font-mono">-${discountAmount}</span>
+                    <span className="font-medium font-mono">-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Shipping</span>
                   <span className="font-medium text-stone-900 font-mono">
-                    {shippingCost === 0 ? 'FREE' : `$${shippingCost}`}
+                    {shippingCost === 0 ? 'FREE' : formatPrice(shippingCost)}
                   </span>
                 </div>
                 <div className="flex justify-between text-stone-400 text-[11px]">
-                  <span>Estimated Tax (7%)</span>
+                  <span>Estimated Tax ({settings.taxRate || 18}%)</span>
                   <span className="font-mono">
-                    ${(((cartSubtotal - discountAmount) * 0.07)).toFixed(2)}
+                    {formatPrice((cartSubtotal - discountAmount) * ((settings.taxRate || 18) / 100))}
                   </span>
                 </div>
 
                 <div className="flex justify-between text-sm font-bold text-stone-950 pt-2 border-t border-stone-200">
                   <span>Total Amount</span>
                   <span className="text-base font-serif font-bold text-stone-950">
-                    ${cartTotal}
+                    {formatPrice(cartTotal)}
                   </span>
                 </div>
               </div>

@@ -19,12 +19,13 @@ export const ShopPage: React.FC = () => {
     selectedCategory,
     setSelectedCategory,
     shopFilterTab,
-    setShopFilterTab
+    setShopFilterTab,
+    formatPrice
   } = useStore();
 
   // Local Shop filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('featured');
   const [currentPage, setCurrentPage] = useState(1);
@@ -90,7 +91,7 @@ export const ShopPage: React.FC = () => {
   const handleResetFilters = () => {
     setSelectedCategory('All');
     setSearchTerm('');
-    setPriceRange([0, 100]);
+    setPriceRange([0, 10000]);
     setSelectedSizeFilter('all');
     setSortBy('featured');
     setShopFilterTab('all');
@@ -303,15 +304,15 @@ export const ShopPage: React.FC = () => {
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold uppercase tracking-wider text-stone-400">Price Ceiling</span>
                 <span className="font-bold text-stone-900 font-mono">
-                  ${priceRange[0]} - ${priceRange[1]}
+                  {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
                 </span>
               </div>
               <input
                 id="price-range-slider"
                 type="range"
-                min="20"
-                max="60"
-                step="2"
+                min="1000"
+                max="10000"
+                step="500"
                 value={priceRange[1]}
                 onChange={(e) => {
                   setPriceRange([priceRange[0], Number(e.target.value)]);
@@ -319,10 +320,10 @@ export const ShopPage: React.FC = () => {
                 }}
                 className="w-full accent-stone-900 cursor-pointer"
               />
-              <div className="flex justify-between text-[10px] text-stone-400">
-                <span>$20</span>
-                <span>$40</span>
-                <span>$60</span>
+              <div className="flex justify-between text-[10px] text-stone-400 font-mono">
+                <span>{formatPrice(1000)}</span>
+                <span>{formatPrice(5000)}</span>
+                <span>{formatPrice(10000)}</span>
               </div>
             </div>
 

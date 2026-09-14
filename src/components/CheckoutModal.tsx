@@ -42,7 +42,9 @@ export const CheckoutModal: React.FC = () => {
     saveAddress,
     deleteAddress,
     setDefaultAddress,
-    showToast
+    showToast,
+    formatPrice,
+    settings
   } = useStore();
 
   const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
@@ -1028,7 +1030,7 @@ export const CheckoutModal: React.FC = () => {
                           </div>
 
                           <span className="text-[10px] font-mono font-bold text-stone-900 mt-1.5">
-                            Amount: ${effectiveTotal}
+                            Amount: {formatPrice(effectiveTotal)}
                           </span>
                         </div>
 
@@ -1186,7 +1188,7 @@ export const CheckoutModal: React.FC = () => {
                 {(paymentMethod === 'Apple Pay' || paymentMethod === 'PayPal') && (
                   <div className="p-6 bg-stone-50 rounded-xl border border-stone-200 text-center space-y-2">
                     <p className="text-xs text-stone-600">
-                      You will authorize <strong>${effectiveTotal}</strong> with <strong>{paymentMethod}</strong> via secure biometric tokenization.
+                      You will authorize <strong>{formatPrice(effectiveTotal)}</strong> with <strong>{paymentMethod}</strong> via secure biometric tokenization.
                     </p>
                   </div>
                 )}
@@ -1211,8 +1213,8 @@ export const CheckoutModal: React.FC = () => {
                       <Lock className="w-4 h-4 text-emerald-200" />
                       <span>
                         {paymentMethod === 'UPI' 
-                          ? `Authorize & Pay with UPI • $${effectiveTotal}`
-                          : `Authorize & Place Order • $${effectiveTotal}`}
+                          ? `Authorize & Pay with UPI • ${formatPrice(effectiveTotal)}`
+                          : `Authorize & Place Order • ${formatPrice(effectiveTotal)}`}
                       </span>
                     </>
                   )}
@@ -1243,7 +1245,7 @@ export const CheckoutModal: React.FC = () => {
                     <span className="text-stone-400">Qty: {item.quantity}</span>
                   </div>
                   <span className="font-bold text-stone-950 font-mono">
-                    ${(item.unitPrice * item.quantity).toFixed(2)}
+                    {formatPrice(item.unitPrice * item.quantity)}
                   </span>
                 </div>
               ))}
@@ -1253,31 +1255,31 @@ export const CheckoutModal: React.FC = () => {
             <div className="pt-4 border-t border-stone-100 space-y-2 text-xs text-stone-600">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-mono font-medium text-stone-900">${cartSubtotal}</span>
+                <span className="font-mono font-medium text-stone-900">{formatPrice(cartSubtotal)}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-amber-700">
                   <span>Coupon ({appliedCoupon.code})</span>
-                  <span className="font-mono font-medium">-${discountAmount}</span>
+                  <span className="font-mono font-medium">-{formatPrice(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>Shipping ({shippingMethod === 'express' ? 'Express' : 'Standard'})</span>
                 <span className="font-mono font-medium text-stone-900">
-                  {effectiveShipping === 0 ? 'FREE' : `$${effectiveShipping}`}
+                  {effectiveShipping === 0 ? 'FREE' : formatPrice(effectiveShipping)}
                 </span>
               </div>
               <div className="flex justify-between text-stone-400 text-[11px]">
-                <span>Sales Tax (7%)</span>
+                <span>Sales Tax ({settings.taxRate || 18}%)</span>
                 <span className="font-mono font-medium">
-                  ${(((cartSubtotal - discountAmount) * 0.07)).toFixed(2)}
+                  {formatPrice((cartSubtotal - discountAmount) * ((settings.taxRate || 18) / 100))}
                 </span>
               </div>
 
               <div className="flex justify-between text-base font-bold text-stone-950 pt-3 border-t border-stone-200">
                 <span>Total Due</span>
                 <span className="font-serif text-lg text-stone-950">
-                  ${effectiveTotal}
+                  {formatPrice(effectiveTotal)}
                 </span>
               </div>
             </div>

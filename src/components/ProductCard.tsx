@@ -8,7 +8,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { setSelectedProductId, setCurrentView, toggleWishlist, isInWishlist, addToCart } = useStore();
+  const { setSelectedProductId, setCurrentView, toggleWishlist, isInWishlist, addToCart, formatPrice } = useStore();
   const [isHovered, setIsHovered] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
 
@@ -143,11 +143,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
           <div className="flex items-baseline gap-1.5">
             <span className="text-base font-bold text-stone-950">
-              ${product.discountPrice || product.price}
+              {formatPrice(product.discountPrice || product.price)}
             </span>
             {hasDiscount && (
               <span className="text-xs text-stone-400 line-through">
-                ${product.price}
+                {formatPrice(product.price)}
               </span>
             )}
             <span className="text-[11px] text-stone-500 ml-1">

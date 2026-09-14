@@ -81,6 +81,7 @@ interface StoreContextType {
   // Admin Actions & Store Settings
   settings: StoreSettings;
   updateSettings: (updates: Partial<StoreSettings>) => void;
+  formatPrice: (amount: number) => string;
   addProduct: (productData: any) => Promise<Product>;
   createProduct: (productData: any) => Promise<Product>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<Product>;
@@ -856,25 +857,35 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const saved = localStorage.getItem('lumina_store_settings');
       return saved ? JSON.parse(saved) : {
         storeName: 'LUMINA Fine Art Posters',
-        currency: 'USD',
-        currencySymbol: '$',
+        currency: 'INR',
+        currencySymbol: '₹',
         currencyRate: 1.0,
-        taxRate: 7.0,
-        shippingFlatRate: 5.99,
-        freeShippingThreshold: 75.0
+        taxRate: 18.0,
+        shippingFlatRate: 299,
+        freeShippingThreshold: 2999
       };
     } catch {
       return {
         storeName: 'LUMINA Fine Art Posters',
-        currency: 'USD',
-        currencySymbol: '$',
+        currency: 'INR',
+        currencySymbol: '₹',
         currencyRate: 1.0,
-        taxRate: 7.0,
-        shippingFlatRate: 5.99,
-        freeShippingThreshold: 75.0
+        taxRate: 18.0,
+        shippingFlatRate: 299,
+        freeShippingThreshold: 2999
       };
     }
   });
+
+  const formatPrice = (amount: number): string => {
+    const symbol = settings.currencySymbol || '₹';
+    const rate = settings.currencyRate ?? 1.0;
+    const converted = amount * rate;
+    if (settings.currency === 'INR' || symbol === '₹') {
+      return `${symbol}${Math.round(converted).toLocaleString('en-IN')}`;
+    }
+    return `${symbol}${converted.toFixed(2)}`;
+  };
 
   const updateSettings = (updates: Partial<StoreSettings>) => {
     setSettings((prev) => {
@@ -971,6 +982,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         refreshCoupons,
         settings,
         updateSettings,
+        formatPrice,
         addProduct,
         createProduct: addProduct,
         updateProduct,

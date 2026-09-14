@@ -30,7 +30,9 @@ export const ProductDetailPage: React.FC = () => {
     isInWishlist,
     reviews,
     submitReview,
-    showToast
+    showToast,
+    formatPrice,
+    settings
   } = useStore();
 
   const product = products.find((p) => p.id === selectedProductId) || products[0];
@@ -363,11 +365,11 @@ export const ProductDetailPage: React.FC = () => {
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold font-serif text-stone-950">
-                    ${calculatedUnitPrice}
+                    {formatPrice(calculatedUnitPrice)}
                   </span>
                   {hasDiscount && (
                     <span className="text-base text-stone-400 line-through">
-                      ${(product.price * selectedSize.priceMultiplier + selectedFrame.price).toFixed(2)}
+                      {formatPrice(product.price * selectedSize.priceMultiplier + selectedFrame.price)}
                     </span>
                   )}
                   {hasDiscount && (
@@ -377,7 +379,7 @@ export const ProductDetailPage: React.FC = () => {
                   )}
                 </div>
                 <p className="text-[11px] text-stone-500 mt-0.5">
-                  Includes taxes. Free shipping on orders over $75.
+                  Includes taxes. Free shipping on orders over {formatPrice(settings.freeShippingThreshold)}.
                 </p>
               </div>
 
@@ -418,18 +420,18 @@ export const ProductDetailPage: React.FC = () => {
                   className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-stone-900 appearance-none focus:outline-none focus:ring-2 focus:ring-stone-950 focus:bg-white transition-all cursor-pointer pr-10 shadow-2xs"
                 >
                   {product.sizes.map((sz) => {
-                    const szUnitPrice = parseFloat((basePrice * sz.priceMultiplier + selectedFrame.price).toFixed(2));
+                    const szUnitPrice = basePrice * sz.priceMultiplier + selectedFrame.price;
                     const isCurrent = sz.id === selectedSize.id;
-                    const diff = (szUnitPrice - calculatedUnitPrice).toFixed(2);
+                    const diff = szUnitPrice - calculatedUnitPrice;
                     const diffText = isCurrent 
                       ? ' (Selected)' 
-                      : parseFloat(diff) > 0 
-                        ? ` (+$${diff})` 
-                        : ` (-$${Math.abs(parseFloat(diff)).toFixed(2)})`;
+                      : diff > 0 
+                        ? ` (+${formatPrice(diff)})` 
+                        : ` (-${formatPrice(Math.abs(diff))})`;
 
                     return (
                       <option key={sz.id} value={sz.id} className="py-1">
-                        {sz.name} — {sz.dimensions} | ${szUnitPrice.toFixed(2)}{diffText}
+                        {sz.name} — {sz.dimensions} | {formatPrice(szUnitPrice)}{diffText}
                       </option>
                     );
                   })}
@@ -443,7 +445,7 @@ export const ProductDetailPage: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                 {product.sizes.map((sz) => {
                   const isSelected = selectedSize.id === sz.id;
-                  const szUnitPrice = parseFloat((basePrice * sz.priceMultiplier + selectedFrame.price).toFixed(2));
+                  const szUnitPrice = basePrice * sz.priceMultiplier + selectedFrame.price;
                   return (
                     <button
                       key={sz.id}
@@ -457,7 +459,7 @@ export const ProductDetailPage: React.FC = () => {
                     >
                       <div className="font-serif text-xs font-bold truncate">{sz.name}</div>
                       <div className={`text-[10px] mt-0.5 font-mono ${isSelected ? 'text-amber-300' : 'text-stone-500'}`}>
-                        ${szUnitPrice.toFixed(2)}
+                        {formatPrice(szUnitPrice)}
                       </div>
                     </button>
                   );
@@ -472,7 +474,7 @@ export const ProductDetailPage: React.FC = () => {
                   2. Select Frame Option
                 </span>
                 <span className="text-stone-500 font-medium">
-                  {selectedFrame.price === 0 ? 'Included' : `+$${selectedFrame.price}`}
+                  {selectedFrame.price === 0 ? 'Included' : `+${formatPrice(selectedFrame.price)}`}
                 </span>
               </div>
 
@@ -500,7 +502,7 @@ export const ProductDetailPage: React.FC = () => {
                           {frame.name}
                         </div>
                         <div className="text-[10px] text-stone-500">
-                          {frame.price === 0 ? 'Print only' : `+$${frame.price}`}
+                          {frame.price === 0 ? 'Print only' : `+${formatPrice(frame.price)}`}
                         </div>
                       </div>
                       {isSelected && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
@@ -542,7 +544,7 @@ export const ProductDetailPage: React.FC = () => {
                   className="flex-1 py-3.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-lg transition-colors cursor-pointer"
                 >
                   <ShoppingBag className="w-4 h-4 text-amber-400" />
-                  <span>Add to Cart • ${(calculatedUnitPrice * quantity).toFixed(2)}</span>
+                  <span>Add to Cart • {formatPrice(calculatedUnitPrice * quantity)}</span>
                 </button>
               </div>
 
