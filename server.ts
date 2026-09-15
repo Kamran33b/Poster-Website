@@ -16,6 +16,14 @@ interface SessionRecord {
 }
 const sessions = new Map<string, SessionRecord>();
 
+interface ResetTokenRecord {
+  token: string;
+  userId: string;
+  email: string;
+  expiresAt: number;
+}
+const resetTokens = new Map<string, ResetTokenRecord>();
+
 const SESSION_COOKIE_NAME = 'lumina_session';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -517,6 +525,125 @@ async function startServer() {
     }
     clearSessionCookie(res);
     return res.json({ success: true, message: 'Logged out successfully.' });
+  });
+
+  // Request Password Reset Link (Forgot Password)
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({ error: 'Please enter your account email address.' });
+      }
+      const trimmedEmail = email.trim().toLowerCase();
+      const user = db.getUserByEmail(trimmedEmail);
+
+      if (!user) {
+        return res.status(404).json({ error: 'No registered collector account found with this email address.' });
+      }
+
+      // Generate unique secure reset token valid for 1 hour
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+      resetTokens.set(resetToken, {
+        token: resetToken,
+        userId: user.id,
+        email: user.email,
+        expiresAt
+      });
+
+      const host = req.headers.host || 'localhost:3000';
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+      const origin = `${protocol}://${host}`;
+      const resetLink = `${origin}/?resetToken=${resetToken}`;
+
+      console.log(`[AUTH] Password recovery link generated for ${user.email}: ${resetLink}`);
+
+      return res.json({
+        success: true,
+        message: `A secure password recovery link has been generated and sent for ${user.email}`,
+        email: user.email,
+        resetToken,
+        resetLink
+      });
+    } catch (err: any) {
+      console.error('Forgot password error:', err);
+      return res.status(500).json({ error: 'Failed to process password recovery request. Please try again.' });
+    }
+  });
+
+  // Verify Reset Token
+  app.get('/api/auth/verify-reset-token', (req, res) => {
+    const token = String(req.query.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ valid: false, error: 'Reset token is required.' });
+    }
+    const record = resetTokens.get(token);
+    if (!record) {
+      return res.status(404).json({ valid: false, error: 'Password reset link is invalid or has already been used.' });
+    }
+    if (Date.now() > record.expiresAt) {
+      resetTokens.delete(token);
+      return res.status(410).json({ valid: false, error: 'Password reset link has expired. Please request a new link.' });
+    }
+    return res.json({ valid: true, email: record.email, token: record.token });
+  });
+
+  // Reset Password using Token
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, newPassword, confirmPassword } = req.body;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ error: 'Password reset token is required.' });
+      }
+      const record = resetTokens.get(token);
+      if (!record) {
+        return res.status(400).json({ error: 'This password reset link is invalid or has already been used.' });
+      }
+      if (Date.now() > record.expiresAt) {
+        resetTokens.delete(token);
+        return res.status(400).json({ error: 'This password reset link has expired. Please request a new link.' });
+      }
+
+      if (!newPassword || typeof newPassword !== 'string') {
+        return res.status(400).json({ error: 'New password is required.' });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+      }
+      if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+        return res.status(400).json({ error: 'Passwords do not match.' });
+      }
+
+      const user = db.getUserById(record.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'Associated user account was not found.' });
+      }
+
+      // Hash new password using bcrypt
+      const passwordHash = await hashPassword(newPassword);
+      const updatedUser = db.updateUser(user.id, { passwordHash });
+
+      // Invalidate consumed token
+      resetTokens.delete(token);
+
+      if (!updatedUser) {
+        return res.status(500).json({ error: 'Failed to update user password.' });
+      }
+
+      // Automatically authenticate and issue session
+      const sessionToken = createSession(updatedUser);
+      setSessionCookie(res, sessionToken);
+
+      return res.json({
+        success: true,
+        message: 'Your password has been successfully reset! You are now logged in.',
+        user: getPublicUser(updatedUser),
+        token: sessionToken
+      });
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      return res.status(500).json({ error: 'An unexpected error occurred while resetting password.' });
+    }
   });
 
   // Update Profile & Addresses

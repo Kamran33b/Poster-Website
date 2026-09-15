@@ -336,15 +336,23 @@ export const Header: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <button
+              <motion.button
                 id="search-toggle-btn"
                 type="button"
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/50 transition-colors"
+                whileHover={{ scale: 1.12 }}
+                whileTap={{ scale: 0.92 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 20 }}
+                className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/60 transition-colors"
                 aria-label="Search Catalog"
               >
-                <Search className="w-5 h-5" />
-              </button>
+                <motion.div
+                  whileHover={{ rotate: 12, scale: 1.08 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                >
+                  <Search className="w-5 h-5" />
+                </motion.div>
+              </motion.button>
             )}
 
             {/* Instant Search Dropdown Results */}
@@ -410,74 +418,136 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Wishlist Button */}
-          <button
+          <motion.button
             id="wishlist-btn"
             type="button"
             onClick={() => setCurrentView('account')}
-            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/50 transition-colors relative"
+            whileHover={{ scale: 1.12 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 20 }}
+            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/60 transition-colors relative"
             aria-label="Wishlist"
           >
-            <Heart className="w-5 h-5" />
+            <motion.div
+              whileHover={{ scale: 1.2, rotate: -10 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 14 }}
+            >
+              <Heart className={`w-5 h-5 ${wishlist.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+            </motion.div>
             {wishlist.length > 0 && (
-              <span className="absolute 0 top-1 right-1 w-4 h-4 bg-amber-700 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <motion.span
+                key={wishlist.length}
+                initial={{ scale: 0.4 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                className="absolute top-1 right-1 w-4 h-4 bg-amber-700 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs"
+              >
                 {wishlist.length}
-              </span>
+              </motion.span>
             )}
-          </button>
+          </motion.button>
 
           {/* Customer Account Button */}
-          <button
+          <motion.button
             id="account-btn"
             type="button"
             onClick={() => setCurrentView('account')}
-            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/50 transition-colors flex items-center gap-1.5"
+            whileHover={{ scale: 1.12, y: -1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 20 }}
+            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/60 transition-colors flex items-center gap-1.5"
             aria-label="Account Profile"
           >
-            <User className="w-5 h-5" />
+            <motion.div
+              whileHover={{ y: -2, scale: 1.1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 16 }}
+            >
+              <User className="w-5 h-5" />
+            </motion.div>
             {user && (
               <span className="hidden md:inline text-xs font-medium text-stone-800 max-w-[80px] truncate">
                 {user.name.split(' ')[0]}
               </span>
             )}
-          </button>
+          </motion.button>
 
           {/* Shopping Cart Button */}
-          <button
+          <motion.button
             id="cart-drawer-toggle"
             type="button"
             onClick={() => setIsCartOpen(true)}
-            className="p-2 bg-stone-900 text-white rounded-full hover:bg-stone-800 transition-colors relative shadow-sm flex items-center justify-center"
+            whileHover={{ scale: 1.1, x: 2 }}
+            whileTap={{ scale: 0.92, x: 0 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 20 }}
+            className="p-2 bg-stone-900 text-white rounded-full hover:bg-stone-800 transition-colors relative shadow-sm flex items-center justify-center overflow-hidden group"
             aria-label="View Shopping Cart"
           >
-            <ShoppingBag className="w-5 h-5" />
+            <motion.div
+              key={cartCount}
+              initial={{ x: -10, opacity: 0.8 }}
+              animate={{ x: 0, opacity: 1 }}
+              whileHover={{ 
+                x: [0, 5, -3, 0],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ 
+                type: 'keyframes',
+                duration: 0.5,
+                ease: 'easeInOut'
+              }}
+              className="flex items-center justify-center"
+            >
+              <ShoppingBag className="w-5 h-5" />
+            </motion.div>
             {cartCount > 0 && (
               <motion.span
                 key={cartCount}
-                initial={{ scale: 0.4, y: -4 }}
-                animate={{ scale: [1.3, 1], y: 0 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                initial={{ scale: 0.4, x: 10, opacity: 0 }}
+                animate={{ scale: [1.3, 1], x: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 16 }}
                 className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-amber-500 text-stone-950 text-[11px] font-black rounded-full flex items-center justify-center border-2 border-[#faf8f5] shadow-sm"
               >
                 {cartCount}
               </motion.span>
             )}
-          </button>
+          </motion.button>
 
           {/* Theme Mode Toggle (Light / Dark) */}
-          <button
+          <motion.button
             id="header-theme-toggle"
             type="button"
             onClick={toggleTheme}
-            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/50 transition-all flex items-center justify-center cursor-pointer group"
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.85, rotate: 180 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+            className="p-2 text-stone-700 hover:text-stone-950 rounded-full hover:bg-stone-200/60 transition-all flex items-center justify-center cursor-pointer group"
             aria-label={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
             title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
           >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 text-amber-400 group-hover:rotate-45 transition-transform" />
-            ) : (
-              <Moon className="w-5 h-5 text-stone-700 group-hover:-rotate-12 transition-transform" />
-            )}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              {theme === 'dark' ? (
+                <motion.div
+                  key="sun"
+                  initial={{ rotate: -90, scale: 0, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: 90, scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Sun className="w-5 h-5 text-amber-400" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="moon"
+                  initial={{ rotate: 90, scale: 0, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: -90, scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Moon className="w-5 h-5 text-stone-700" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
 
           {/* Admin Switcher Button */}
           <div className="border-l border-stone-300 pl-2 sm:pl-3">

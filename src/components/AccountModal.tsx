@@ -45,6 +45,9 @@ export const AccountModal: React.FC = () => {
     loginUser,
     registerUser,
     logoutUser,
+    requestPasswordReset,
+    verifyResetToken,
+    resetPassword,
     updateUserProfile,
     addAddress,
     saveAddress,
@@ -79,7 +82,7 @@ export const AccountModal: React.FC = () => {
 
   // Auth Form states (Real database-backed auth)
   const [unauthView, setUnauthView] = useState<'auth' | 'track'>('auth');
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'reset_password'>('login');
   const [authEmail, setAuthEmail] = useState('');
   const [authName, setAuthName] = useState('');
   const [authPhone, setAuthPhone] = useState('');
@@ -89,6 +92,36 @@ export const AccountModal: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+
+  // Password Reset Link states
+  const [resetToken, setResetToken] = useState<string>('');
+  const [generatedResetLink, setGeneratedResetLink] = useState<string | null>(null);
+  const [resetTokenValid, setResetTokenValid] = useState<boolean | null>(null);
+  const [resetTokenEmail, setResetTokenEmail] = useState<string>('');
+  const [resetSuccess, setResetSuccess] = useState<boolean>(false);
+  const [copiedResetLink, setCopiedResetLink] = useState<boolean>(false);
+
+  // Check URL query parameters for resetToken or token on mount
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('resetToken') || params.get('token');
+    if (tokenFromUrl) {
+      setAuthMode('reset_password');
+      setResetToken(tokenFromUrl);
+      setUnauthView('auth');
+      
+      verifyResetToken(tokenFromUrl).then((res) => {
+        if (res.valid && res.email) {
+          setResetTokenValid(true);
+          setResetTokenEmail(res.email);
+          setAuthEmail(res.email);
+        } else {
+          setResetTokenValid(false);
+          setAuthError(res.error || 'Password reset link is invalid or has expired.');
+        }
+      });
+    }
+  }, []);
 
   // Address Management state (Add & Edit)
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
@@ -509,8 +542,57 @@ export const AccountModal: React.FC = () => {
         setAuthError('Please enter your email address to recover your account');
         return;
       }
-      setResetSent(true);
-      showToast('Password reset link sent to ' + authEmail.trim());
+      setAuthSubmitting(true);
+      try {
+        const res = await requestPasswordReset(authEmail.trim());
+        if (res.success) {
+          setResetSent(true);
+          setGeneratedResetLink(res.resetLink || null);
+          if (res.resetToken) setResetToken(res.resetToken);
+          showToast('Password recovery link generated for ' + authEmail.trim());
+        } else {
+          setAuthError(res.error || 'Failed to generate password recovery link.');
+        }
+      } catch (err: any) {
+        setAuthError(err.message || 'Error sending password reset request.');
+      } finally {
+        setAuthSubmitting(false);
+      }
+      return;
+    }
+
+    if (authMode === 'reset_password') {
+      if (!authPassword || authPassword.length < 6) {
+        setAuthError('New password must be at least 6 characters long');
+        return;
+      }
+      if (authPassword !== authConfirmPassword) {
+        setAuthError('Passwords do not match');
+        return;
+      }
+      if (!resetToken) {
+        setAuthError('Missing password reset token');
+        return;
+      }
+
+      setAuthSubmitting(true);
+      try {
+        const res = await resetPassword(resetToken, authPassword, authConfirmPassword);
+        if (res.success) {
+          setResetSuccess(true);
+          setAuthPassword('');
+          setAuthConfirmPassword('');
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch {}
+        } else {
+          setAuthError(res.error || 'Password reset failed. Please try again.');
+        }
+      } catch (err: any) {
+        setAuthError(err.message || 'An error occurred during password reset.');
+      } finally {
+        setAuthSubmitting(false);
+      }
       return;
     }
 
@@ -697,11 +779,13 @@ export const AccountModal: React.FC = () => {
                   {authMode === 'login' && 'Sign in to your Account'}
                   {authMode === 'register' && 'Create Collector Account'}
                   {authMode === 'forgot' && 'Reset Your Password'}
+                  {authMode === 'reset_password' && 'Choose New Password'}
                 </h2>
                 <p className="text-xs text-stone-500 mt-1">
                   {authMode === 'login' && 'Access your order history, shipping addresses, and curated gallery'}
                   {authMode === 'register' && 'Create a secure collector profile to manage fine art acquisitions'}
                   {authMode === 'forgot' && 'Enter your verified account email to recover access'}
+                  {authMode === 'reset_password' && `Updating password for ${resetTokenEmail || authEmail || 'your account'}`}
                 </p>
               </div>
 
@@ -713,19 +797,101 @@ export const AccountModal: React.FC = () => {
               )}
 
               {authMode === 'forgot' && resetSent ? (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs text-center space-y-3">
-                  <Check className="w-6 h-6 mx-auto text-emerald-600" />
-                  <p>We’ve dispatched a secure login recovery link to <strong>{authEmail}</strong>.</p>
+                <div className="p-5 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-emerald-900 text-xs space-y-4 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-xs">
+                    <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  
+                  <div className="text-center space-y-1">
+                    <h3 className="font-semibold text-sm text-emerald-950">Recovery Link Sent!</h3>
+                    <p className="text-stone-600 leading-relaxed">
+                      A password recovery link has been generated and dispatched to <strong>{authEmail}</strong>.
+                    </p>
+                  </div>
+
+                  {generatedResetLink && (
+                    <div className="p-3 bg-white border border-emerald-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-stone-500">
+                        <span>Direct Recovery Link</span>
+                        <span className="text-emerald-700">Valid for 1 hour</span>
+                      </div>
+                      <div className="p-2 bg-stone-50 border border-stone-200 rounded-lg text-[11px] font-mono text-stone-700 break-all select-all">
+                        {generatedResetLink}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedResetLink);
+                            setCopiedResetLink(true);
+                            showToast('Recovery link copied to clipboard!');
+                            setTimeout(() => setCopiedResetLink(false), 3000);
+                          }}
+                          className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition-colors"
+                        >
+                          {copiedResetLink ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Copied Link!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-stone-500" />
+                              <span>Copy Link</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthMode('reset_password');
+                            setResetTokenValid(true);
+                            setResetTokenEmail(authEmail);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+                        >
+                          <span>Reset Password Now</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('login');
+                        setResetSent(false);
+                        setAuthError(null);
+                      }}
+                      className="font-medium text-stone-600 hover:text-stone-900 underline"
+                    >
+                      Back to Sign In
+                    </button>
+                  </div>
+                </div>
+              ) : authMode === 'reset_password' && resetSuccess ? (
+                <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-4">
+                  <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg text-emerald-950 font-bold">Password Updated!</h3>
+                    <p className="text-xs text-stone-600 mt-1">
+                      Your password has been changed successfully. You are now logged in as <strong>{resetTokenEmail || authEmail}</strong>.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
                       setAuthMode('login');
-                      setResetSent(false);
-                      setAuthError(null);
+                      setResetSuccess(false);
                     }}
-                    className="font-semibold underline text-emerald-900"
+                    className="w-full py-2.5 bg-stone-950 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
                   >
-                    Back to Sign In
+                    Go to Account Dashboard
                   </button>
                 </div>
               ) : (
@@ -744,17 +910,19 @@ export const AccountModal: React.FC = () => {
                     </div>
                   )}
 
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="collector@example.com"
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900"
-                    />
-                  </div>
+                  {authMode !== 'reset_password' && (
+                    <div>
+                      <label className="block font-medium text-stone-700 mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="collector@example.com"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900"
+                      />
+                    </div>
+                  )}
 
                   {authMode === 'register' && (
                     <div>
@@ -772,7 +940,9 @@ export const AccountModal: React.FC = () => {
                   {authMode !== 'forgot' && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="font-medium text-stone-700">Password</label>
+                        <label className="font-medium text-stone-700">
+                          {authMode === 'reset_password' ? 'New Password' : 'Password'}
+                        </label>
                         {authMode === 'login' && (
                           <button
                             type="button"
@@ -790,7 +960,7 @@ export const AccountModal: React.FC = () => {
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
-                          placeholder={authMode === 'register' ? 'Minimum 6 characters' : 'Enter account password'}
+                          placeholder={authMode === 'register' || authMode === 'reset_password' ? 'Minimum 6 characters' : 'Enter account password'}
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
                           className="w-full p-2.5 pr-10 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
@@ -807,13 +977,13 @@ export const AccountModal: React.FC = () => {
                     </div>
                   )}
 
-                  {authMode === 'register' && (
+                  {(authMode === 'register' || authMode === 'reset_password') && (
                     <div>
-                      <label className="block font-medium text-stone-700 mb-1">Confirm Password</label>
+                      <label className="block font-medium text-stone-700 mb-1">Confirm New Password</label>
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
-                        placeholder="Re-enter password"
+                        placeholder="Re-enter new password"
                         value={authConfirmPassword}
                         onChange={(e) => setAuthConfirmPassword(e.target.value)}
                         className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
@@ -823,7 +993,7 @@ export const AccountModal: React.FC = () => {
 
                   <button
                     type="submit"
-                    disabled={authSubmitting}
+                    disabled={authSubmitting || (authMode === 'reset_password' && resetTokenValid === false)}
                     className="w-full py-3 bg-stone-950 hover:bg-stone-800 disabled:bg-stone-600 text-white rounded-xl text-xs font-semibold shadow-md transition-colors flex items-center justify-center gap-2"
                   >
                     {authSubmitting ? (
@@ -835,7 +1005,8 @@ export const AccountModal: React.FC = () => {
                       <>
                         {authMode === 'login' && 'Sign In to Store'}
                         {authMode === 'register' && 'Register Collector Account'}
-                        {authMode === 'forgot' && 'Send Reset Link'}
+                        {authMode === 'forgot' && 'Send Recovery Link'}
+                        {authMode === 'reset_password' && 'Update Password & Sign In'}
                       </>
                     )}
                   </button>

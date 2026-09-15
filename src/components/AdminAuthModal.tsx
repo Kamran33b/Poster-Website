@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Lock, 
   KeyRound, 
@@ -196,23 +197,33 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   };
 
   return (
-    <div 
-      id="admin-auth-modal-overlay"
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
-      style={{ zIndex: 9999 }}
-    >
-      {/* Dark backdrop */}
-      <div 
-        className="fixed inset-0 bg-stone-950/80 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <div 
+          id="admin-auth-modal-overlay"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          style={{ zIndex: 9999 }}
+        >
+          {/* Dark backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-stone-950/80 backdrop-blur-sm"
+            onClick={onClose}
+            aria-hidden="true"
+          />
 
-      {/* Modal Card Centered */}
-      <div 
-        id="admin-auth-card"
-        className="relative z-10 bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 my-auto animate-in fade-in zoom-in-95 duration-150"
-      >
+          {/* Modal Card Centered */}
+          <motion.div 
+            id="admin-auth-card"
+            initial={{ scale: 0.92, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 15 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            className="relative z-10 bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 my-auto overflow-hidden"
+          >
         {/* Top Dismiss Button */}
         <button
           type="button"
@@ -520,7 +531,9 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           </form>
         )}
 
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };

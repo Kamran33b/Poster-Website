@@ -53,6 +53,9 @@ interface StoreContextType {
   loginUser: (email: string, password?: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   registerUser: (data: { name: string; email: string; password: string; confirmPassword?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
   logoutUser: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; message?: string; error?: string; resetToken?: string; resetLink?: string }>;
+  verifyResetToken: (token: string) => Promise<{ valid: boolean; email?: string; error?: string }>;
+  resetPassword: (token: string, newPassword: string, confirmPassword?: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   updateUserProfile: (profile: Partial<UserAccount>) => Promise<void>;
   checkAuthSession: () => Promise<void>;
   addAddress: (address: ShippingAddress) => void;
@@ -772,6 +775,67 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     showToast('Signed out successfully');
   };
 
+  const requestPasswordReset = async (email: string): Promise<{ success: boolean; message?: string; error?: string; resetToken?: string; resetLink?: string }> => {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Failed to request password reset link.' };
+      }
+      return {
+        success: true,
+        message: data.message,
+        resetToken: data.resetToken,
+        resetLink: data.resetLink
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error requesting password reset.' };
+    }
+  };
+
+  const verifyResetToken = async (token: string): Promise<{ valid: boolean; email?: string; error?: string }> => {
+    try {
+      const res = await fetch(`/api/auth/verify-reset-token?token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        return { valid: false, error: data.error || 'Reset link is invalid or expired.' };
+      }
+      return { valid: true, email: data.email };
+    } catch (err: any) {
+      return { valid: false, error: err.message || 'Error verifying reset link.' };
+    }
+  };
+
+  const resetPassword = async (token: string, newPassword: string, confirmPassword?: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword, confirmPassword })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Password reset failed.' };
+      }
+
+      if (data.user) {
+        setUser(data.user);
+        try { localStorage.setItem('lumina_user', JSON.stringify(data.user)); } catch {}
+        if (data.user.role === 'admin') {
+          setIsAdminAuthenticated(true);
+        }
+      }
+      showToast(data.message || 'Password reset successfully!');
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to reset password.' };
+    }
+  };
+
   const updateUserProfile = async (profile: Partial<UserAccount>) => {
     if (!user) return;
     try {
@@ -1156,6 +1220,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         loginUser,
         registerUser,
         logoutUser,
+        requestPasswordReset,
+        verifyResetToken,
+        resetPassword,
         updateUserProfile,
         checkAuthSession,
         addAddress,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { 
   BarChart3, 
@@ -360,28 +361,49 @@ export const AdminDashboard: React.FC = () => {
                   id={`admin-nav-${tab.id}`}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
+                  className={`relative w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
                     isCurrent
-                      ? 'bg-stone-900 text-white shadow-sm'
-                      : 'text-stone-700 hover:bg-stone-100'
+                      ? 'text-white'
+                      : 'text-stone-700 hover:bg-stone-100/80'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isCurrent ? 'text-amber-400' : 'text-stone-400'}`} />
-                  <span>{tab.label}</span>
+                  {isCurrent && (
+                    <motion.div
+                      layoutId="adminActiveTabBg"
+                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                      className="absolute inset-0 bg-stone-900 rounded-xl shadow-sm"
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-3">
+                    <Icon className={`w-4 h-4 transition-colors ${isCurrent ? 'text-amber-400' : 'text-stone-400'}`} />
+                    <span>{tab.label}</span>
+                  </span>
                 </button>
               );
             })}
           </aside>
 
-          {/* Admin Content Area */}
+          {/* Admin Content Area with Smooth Page Motion */}
           <main className="lg:col-span-9 space-y-6">
-            
-            {/* 1. OVERVIEW TAB */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+              >
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                {/* Metrics Cards */}
+                {/* Metrics Cards with Motion */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05, duration: 0.25 }}
+                    whileHover={{ y: -3 }}
+                    className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between transition-shadow hover:shadow-md"
+                  >
                     <div className="flex items-center justify-between text-stone-500 text-xs">
                       <span className="font-semibold uppercase tracking-wider">Total Store Sales</span>
                       <DollarSign className="w-4 h-4 text-emerald-600" />
@@ -394,9 +416,15 @@ export const AdminDashboard: React.FC = () => {
                         +18.4% compared to last period
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, duration: 0.25 }}
+                    whileHover={{ y: -3 }}
+                    className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between transition-shadow hover:shadow-md"
+                  >
                     <div className="flex items-center justify-between text-stone-500 text-xs">
                       <span className="font-semibold uppercase tracking-wider">Total Physical Orders</span>
                       <ShoppingBag className="w-4 h-4 text-amber-600" />
@@ -409,9 +437,15 @@ export const AdminDashboard: React.FC = () => {
                         All orders persisted in local database
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15, duration: 0.25 }}
+                    whileHover={{ y: -3 }}
+                    className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between transition-shadow hover:shadow-md"
+                  >
                     <div className="flex items-center justify-between text-stone-500 text-xs">
                       <span className="font-semibold uppercase tracking-wider">Active Art Catalog</span>
                       <Package className="w-4 h-4 text-stone-900" />
@@ -424,7 +458,7 @@ export const AdminDashboard: React.FC = () => {
                         Across {categories.length} art categories
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
 
                 {/* Low Stock Alert if any */}
@@ -1215,15 +1249,30 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>
 
       {/* Add / Edit Product Modal */}
-      {showProductModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-stone-200 max-h-[90vh] overflow-y-auto">
+      <AnimatePresence>
+        {showProductModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs"
+              onClick={() => setShowProductModal(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="relative z-10 bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-stone-200 max-h-[90vh] overflow-y-auto"
+            >
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-stone-100">
               <h3 className="font-serif text-xl font-normal text-stone-950">
                 {editingProductId ? 'Edit Physical Poster' : 'Add New Physical Poster'}
@@ -1405,14 +1454,29 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Order Details Modal */}
-      {viewingOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-stone-200 space-y-5">
+      <AnimatePresence>
+        {viewingOrder && (
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs"
+              onClick={() => setViewingOrder(null)}
+            />
+            <motion.div 
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="relative z-10 bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-stone-200 space-y-5"
+            >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div>
                 <h3 className="font-serif text-xl font-normal text-stone-950">
@@ -1563,14 +1627,29 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Bulk Price Update Modal */}
-      {showBulkPriceModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-stone-200">
+      <AnimatePresence>
+        {showBulkPriceModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs"
+              onClick={() => setShowBulkPriceModal(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="relative z-10 bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-stone-200"
+            >
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-stone-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
@@ -1748,14 +1827,29 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Admin Order Cancellation & Restock Modal */}
-      {adminCancellingOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp space-y-5">
+      <AnimatePresence>
+        {adminCancellingOrder && (
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs"
+              onClick={() => setAdminCancellingOrder(null)}
+            />
+            <motion.div 
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="relative z-10 bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-stone-200 space-y-5"
+            >
             <div className="flex items-start justify-between pb-4 border-b border-stone-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
@@ -1850,9 +1944,10 @@ export const AdminDashboard: React.FC = () => {
                 <span>{isAdminCancelling ? 'Processing...' : 'Confirm Cancel & Restock'}</span>
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
     </div>
   );
