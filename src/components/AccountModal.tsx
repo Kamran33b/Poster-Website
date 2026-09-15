@@ -31,7 +31,10 @@ import {
   Home,
   Compass,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 import { ShippingAddress, Order } from '../types';
 
@@ -40,6 +43,7 @@ export const AccountModal: React.FC = () => {
     user,
     savedAddresses,
     loginUser,
+    registerUser,
     logoutUser,
     updateUserProfile,
     addAddress,
@@ -73,12 +77,17 @@ export const AccountModal: React.FC = () => {
   const [trackError, setTrackError] = useState<string | null>(null);
   const [copiedTracking, setCopiedTracking] = useState(false);
 
-  // Auth Form states (if not logged in)
+  // Auth Form states (Real database-backed auth)
   const [unauthView, setUnauthView] = useState<'auth' | 'track'>('auth');
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
-  const [authEmail, setAuthEmail] = useState('sarah.jenkins@example.com');
-  const [authName, setAuthName] = useState('Sarah Jenkins');
-  const [authPassword, setAuthPassword] = useState('••••••••');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
   // Address Management state (Add & Edit)
@@ -491,14 +500,90 @@ export const AccountModal: React.FC = () => {
     );
   };
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
+
     if (authMode === 'forgot') {
+      if (!authEmail.trim()) {
+        setAuthError('Please enter your email address to recover your account');
+        return;
+      }
       setResetSent(true);
-      showToast('Password reset link sent to ' + authEmail);
+      showToast('Password reset link sent to ' + authEmail.trim());
       return;
     }
-    loginUser(authEmail, authName);
+
+    if (authMode === 'login') {
+      if (!authEmail.trim() || !authPassword) {
+        setAuthError('Please enter both your email address and password');
+        return;
+      }
+      setAuthSubmitting(true);
+      try {
+        const res = await loginUser(authEmail.trim(), authPassword);
+        if (!res.success) {
+          setAuthError(res.error || 'Invalid email or password. Please verify credentials.');
+        }
+      } catch (err: any) {
+        setAuthError(err.message || 'Login failed. Please check your connection.');
+      } finally {
+        setAuthSubmitting(false);
+      }
+      return;
+    }
+
+    if (authMode === 'register') {
+      if (!authName.trim()) {
+        setAuthError('Please enter your full name');
+        return;
+      }
+      if (!authEmail.trim()) {
+        setAuthError('Please enter a valid email address');
+        return;
+      }
+      if (!authPassword || authPassword.length < 6) {
+        setAuthError('Password must be at least 6 characters');
+        return;
+      }
+      if (authPassword !== authConfirmPassword) {
+        setAuthError('Passwords do not match');
+        return;
+      }
+
+      setAuthSubmitting(true);
+      try {
+        const res = await registerUser({
+          name: authName.trim(),
+          email: authEmail.trim(),
+          password: authPassword,
+          confirmPassword: authConfirmPassword,
+          phone: authPhone.trim()
+        });
+        if (!res.success) {
+          setAuthError(res.error || 'Registration failed. This email may already be in use.');
+        }
+      } catch (err: any) {
+        setAuthError(err.message || 'Registration failed. Please check your connection.');
+      } finally {
+        setAuthSubmitting(false);
+      }
+    }
+  };
+
+  const handleQuickDemoSignIn = async () => {
+    setAuthEmail('sarah.jenkins@example.com');
+    setAuthPassword('Sarah123!');
+    setAuthError(null);
+    setAuthSubmitting(true);
+    try {
+      const res = await loginUser('sarah.jenkins@example.com', 'Sarah123!');
+      if (!res.success) {
+        setAuthError(res.error || 'Demo sign-in failed');
+      }
+    } finally {
+      setAuthSubmitting(false);
+    }
   };
 
   const handleStartNewAddress = () => {
@@ -614,9 +699,18 @@ export const AccountModal: React.FC = () => {
                   {authMode === 'forgot' && 'Reset Your Password'}
                 </h2>
                 <p className="text-xs text-stone-500 mt-1">
-                  Access order tracking, saved wall galleries, and shipping profiles
+                  {authMode === 'login' && 'Access your order history, shipping addresses, and curated gallery'}
+                  {authMode === 'register' && 'Create a secure collector profile to manage fine art acquisitions'}
+                  {authMode === 'forgot' && 'Enter your verified account email to recover access'}
                 </p>
               </div>
+
+              {authError && (
+                <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span className="leading-tight">{authError}</span>
+                </div>
+              )}
 
               {authMode === 'forgot' && resetSent ? (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs text-center space-y-3">
@@ -627,6 +721,7 @@ export const AccountModal: React.FC = () => {
                     onClick={() => {
                       setAuthMode('login');
                       setResetSent(false);
+                      setAuthError(null);
                     }}
                     className="font-semibold underline text-emerald-900"
                   >
@@ -641,6 +736,7 @@ export const AccountModal: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Eleanor Vance"
                         value={authName}
                         onChange={(e) => setAuthName(e.target.value)}
                         className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900"
@@ -653,11 +749,25 @@ export const AccountModal: React.FC = () => {
                     <input
                       type="email"
                       required
+                      placeholder="collector@example.com"
                       value={authEmail}
                       onChange={(e) => setAuthEmail(e.target.value)}
                       className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900"
                     />
                   </div>
+
+                  {authMode === 'register' && (
+                    <div>
+                      <label className="block font-medium text-stone-700 mb-1">Phone Number <span className="text-stone-400 font-normal">(Optional)</span></label>
+                      <input
+                        type="tel"
+                        placeholder="+1 (555) 000-0000"
+                        value={authPhone}
+                        onChange={(e) => setAuthPhone(e.target.value)}
+                        className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900"
+                      />
+                    </div>
+                  )}
 
                   {authMode !== 'forgot' && (
                     <div>
@@ -666,18 +776,46 @@ export const AccountModal: React.FC = () => {
                         {authMode === 'login' && (
                           <button
                             type="button"
-                            onClick={() => setAuthMode('forgot')}
+                            onClick={() => {
+                              setAuthMode('forgot');
+                              setAuthError(null);
+                            }}
                             className="text-[11px] text-amber-700 hover:underline"
                           >
                             Forgot password?
                           </button>
                         )}
                       </div>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          placeholder={authMode === 'register' ? 'Minimum 6 characters' : 'Enter account password'}
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          className="w-full p-2.5 pr-10 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 focus:outline-none"
+                          title={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {authMode === 'register' && (
+                    <div>
+                      <label className="block font-medium text-stone-700 mb-1">Confirm Password</label>
                       <input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         required
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
+                        placeholder="Re-enter password"
+                        value={authConfirmPassword}
+                        onChange={(e) => setAuthConfirmPassword(e.target.value)}
                         className="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-stone-900 font-mono"
                       />
                     </div>
@@ -685,11 +823,21 @@ export const AccountModal: React.FC = () => {
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-stone-950 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold shadow-md transition-colors"
+                    disabled={authSubmitting}
+                    className="w-full py-3 bg-stone-950 hover:bg-stone-800 disabled:bg-stone-600 text-white rounded-xl text-xs font-semibold shadow-md transition-colors flex items-center justify-center gap-2"
                   >
-                    {authMode === 'login' && 'Sign In to Store'}
-                    {authMode === 'register' && 'Register Collector Account'}
-                    {authMode === 'forgot' && 'Send Reset Link'}
+                    {authSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-stone-300" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        {authMode === 'login' && 'Sign In to Store'}
+                        {authMode === 'register' && 'Register Collector Account'}
+                        {authMode === 'forgot' && 'Send Reset Link'}
+                      </>
+                    )}
                   </button>
                 </form>
               )}
@@ -698,8 +846,9 @@ export const AccountModal: React.FC = () => {
               <div className="mt-6 pt-4 border-t border-stone-100 text-center">
                 <button
                   type="button"
-                  onClick={() => loginUser('sarah.jenkins@example.com', 'Sarah Jenkins')}
-                  className="text-xs text-amber-700 hover:text-amber-800 font-semibold underline"
+                  disabled={authSubmitting}
+                  onClick={handleQuickDemoSignIn}
+                  className="text-xs text-amber-700 hover:text-amber-800 font-semibold underline disabled:opacity-50"
                 >
                   ⚡ Quick Sign In as Demo Collector (Sarah Jenkins)
                 </button>
@@ -711,7 +860,10 @@ export const AccountModal: React.FC = () => {
                     Don't have an account?{' '}
                     <button
                       type="button"
-                      onClick={() => setAuthMode('register')}
+                      onClick={() => {
+                        setAuthMode('register');
+                        setAuthError(null);
+                      }}
                       className="text-stone-900 font-semibold underline"
                     >
                       Create one now
@@ -722,7 +874,10 @@ export const AccountModal: React.FC = () => {
                     Already a registered collector?{' '}
                     <button
                       type="button"
-                      onClick={() => setAuthMode('login')}
+                      onClick={() => {
+                        setAuthMode('login');
+                        setAuthError(null);
+                      }}
                       className="text-stone-900 font-semibold underline"
                     >
                       Sign In

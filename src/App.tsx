@@ -34,7 +34,8 @@ const AppContent: React.FC = () => {
     isAdminAuthenticated,
     setIsAdminAuthenticated,
     isAdminAuthModalOpen,
-    setIsAdminAuthModalOpen
+    setIsAdminAuthModalOpen,
+    checkAuthSession
   } = useStore();
 
   // Scroll to top on view change
@@ -91,6 +92,7 @@ const AppContent: React.FC = () => {
           setIsAdminAuthenticated(true);
           setIsAdminAuthModalOpen(false);
           setCurrentView('admin');
+          checkAuthSession();
           showToast('Admin portal unlocked successfully.');
         }}
       />

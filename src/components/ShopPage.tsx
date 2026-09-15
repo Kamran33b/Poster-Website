@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { 
@@ -408,11 +408,25 @@ export const ShopPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {paginatedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <AnimatePresence mode="popLayout">
+                <motion.div
+                  layout
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {paginatedProducts.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.92 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ProductCard product={product} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
             )}
 
             {/* Pagination Controls */}

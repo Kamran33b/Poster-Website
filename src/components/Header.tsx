@@ -451,9 +451,15 @@ export const Header: React.FC = () => {
           >
             <ShoppingBag className="w-5 h-5" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-amber-500 text-stone-950 text-[11px] font-black rounded-full flex items-center justify-center border-2 border-[#faf8f5]">
+              <motion.span
+                key={cartCount}
+                initial={{ scale: 0.4, y: -4 }}
+                animate={{ scale: [1.3, 1], y: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-amber-500 text-stone-950 text-[11px] font-black rounded-full flex items-center justify-center border-2 border-[#faf8f5] shadow-sm"
+              >
                 {cartCount}
-              </span>
+              </motion.span>
             )}
           </button>
 

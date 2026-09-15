@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { 
   CheckCircle2, 
@@ -13,7 +14,9 @@ import {
   Ban,
   XCircle,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Sparkles,
+  Award
 } from 'lucide-react';
 import { OrderStatus } from '../types';
 
@@ -112,10 +115,33 @@ export const OrderConfirmationModal: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200 shadow-sm text-center mb-8">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200 shadow-sm text-center mb-8 relative overflow-hidden">
+            {/* Gallery Seal Stamp Animation */}
+            <motion.div
+              initial={{ scale: 2.5, opacity: 0, rotate: -30 }}
+              animate={{ scale: 1, opacity: 1, rotate: -6 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 18, delay: 0.2 }}
+              className="absolute top-4 right-4 sm:top-6 sm:right-8 border-2 border-amber-600/80 text-amber-800 bg-amber-50/90 rounded-2xl p-2.5 shadow-md flex items-center gap-2 rotate-[-6deg] backdrop-blur-xs select-none"
+            >
+              <Award className="w-5 h-5 text-amber-600 shrink-0" />
+              <div className="text-left">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-900 leading-none">
+                  Certificate of Authenticity
+                </div>
+                <div className="text-[9px] font-mono text-amber-700 mt-0.5">
+                  Archival 200gsm Guarantee
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"
+            >
               <CheckCircle2 className="w-10 h-10" />
-            </div>
+            </motion.div>
 
             <span className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-800">
               Payment Confirmed • Order #{order.orderNumber}

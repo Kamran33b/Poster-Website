@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
-import { Heart, ShoppingBag, Star, Eye } from 'lucide-react';
+import { Heart, ShoppingBag, Star, Eye, Check } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -10,13 +11,33 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { setSelectedProductId, setCurrentView, toggleWishlist, isInWishlist, addToCart, formatPrice } = useStore();
   const [isHovered, setIsHovered] = useState(false);
-  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [selectedImageIdx] = useState(0);
+  const [justAdded, setJustAdded] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const inWishlist = isInWishlist(product.id);
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   const discountPercent = hasDiscount
     ? Math.round(((product.price - product.discountPrice!) / product.price) * 100)
     : 0;
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -6; // Max 6deg tilt
+    const rotateY = ((x - centerX) / centerX) * 6;
+    setTilt({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setTilt({ x: 0, y: 0 });
+  };
 
   const handleCardClick = () => {
     setSelectedProductId(product.id);
@@ -28,6 +49,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const defaultSize = product.sizes[0];
     const defaultFrame = product.frameOptions[0];
     addToCart(product, defaultSize, defaultFrame, 1);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1800);
   };
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
@@ -36,17 +59,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   return (
-    <div
+    <motion.div
       id={`product-card-${product.id}`}
+      ref={cardRef}
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group relative cursor-pointer flex flex-col bg-white rounded-xl border border-stone-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      initial={{ opacity: 0, y: 15 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      animate={{
+        rotateX: tilt.x,
+        rotateY: tilt.y,
+      }}
+      style={{ perspective: 1000 }}
+      className="group relative cursor-pointer flex flex-col bg-white rounded-xl border border-stone-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden"
     >
       {/* Poster Image Stage with Mock Frame Matting */}
       <div className="relative w-full aspect-[3/4] bg-[#f4efe8] p-4 sm:p-5 flex items-center justify-center overflow-hidden">
-        {/* Frame / Paper Shadow */}
-        <div className="relative w-full h-full shadow-[0_6px_20px_rgba(0,0,0,0.15)] bg-white p-1.5 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+        {/* Frame / Paper Shadow with inset shift */}
+        <motion.div
+          className="relative w-full h-full shadow-[0_6px_20px_rgba(0,0,0,0.15)] bg-white p-1.5 transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+          style={{ transformStyle: 'preserve-3d' }}
+        >
           <img
             src={product.images[selectedImageIdx] || product.images[0]}
             alt={product.name}
@@ -56,8 +93,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           />
 
           {/* Glare / Studio reflection overlay */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </div>
+          <div
+            className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/25 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{
+              backgroundPosition: `${(tilt.y + 6) * 10}% ${(tilt.x + 6) * 10}%`,
+            }}
+          />
+        </motion.div>
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
@@ -78,20 +120,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Wishlist Heart Button */}
-        <button
+        {/* Wishlist Heart Button with Heartbeat Particle Burst */}
+        <motion.button
           id={`wishlist-toggle-${product.id}`}
           type="button"
           onClick={handleWishlistToggle}
+          whileTap={{ scale: 0.75 }}
+          whileHover={{ scale: 1.1 }}
           className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all duration-200 z-10 ${
             inWishlist
-              ? 'bg-rose-50 text-rose-600 shadow-md scale-110'
+              ? 'bg-rose-50 text-rose-600 shadow-md'
               : 'bg-white/80 text-stone-600 hover:bg-white hover:text-stone-950 shadow-sm opacity-90 group-hover:opacity-100'
           }`}
           aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart className={`w-4 h-4 ${inWishlist ? 'fill-rose-500' : ''}`} />
-        </button>
+          <motion.div
+            animate={inWishlist ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Heart className={`w-4 h-4 ${inWishlist ? 'fill-rose-500 text-rose-500' : ''}`} />
+          </motion.div>
+        </motion.button>
 
         {/* Quick Actions Hover Overlay */}
         <div
@@ -99,17 +148,46 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             isHovered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
           }`}
         >
-          <button
+          <motion.button
             id={`quick-add-${product.id}`}
             type="button"
             onClick={handleQuickAdd}
-            className="flex-1 bg-stone-950 text-white hover:bg-stone-800 text-xs font-semibold py-2.5 px-3 rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-colors"
+            whileTap={{ scale: 0.95 }}
+            className={`flex-1 text-xs font-semibold py-2.5 px-3 rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-all ${
+              justAdded
+                ? 'bg-emerald-700 text-white'
+                : 'bg-stone-950 text-white hover:bg-stone-800'
+            }`}
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
-            <span>Quick Add</span>
-          </button>
-          <button
+            <AnimatePresence mode="wait">
+              {justAdded ? (
+                <motion.div
+                  key="check"
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  exit={{ scale: 0 }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 text-emerald-300" />
+                  <span>Added!</span>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="add"
+                  initial={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="flex items-center gap-1.5"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Quick Add</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={(e) => {
               e.stopPropagation();
               handleCardClick();
@@ -118,7 +196,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             title="View details and custom frame options"
           >
             <Eye className="w-3.5 h-3.5" />
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -160,6 +238,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
+

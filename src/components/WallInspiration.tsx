@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { Plus, ArrowRight, Check } from 'lucide-react';
 
@@ -132,14 +133,21 @@ export const WallInspiration: React.FC = () => {
 
         {/* Interactive Wall Visualizer */}
         <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-stone-300 bg-stone-900">
-          {/* Main Room Image */}
+          {/* Main Room Image with Motion Crossfade */}
           <div className="relative aspect-[16/9] sm:aspect-[21/9] w-full max-h-[580px] overflow-hidden">
-            <img
-              src={currentRoom.image}
-              alt={currentRoom.name}
-              className="w-full h-full object-cover brightness-95"
-              referrerPolicy="no-referrer"
-            />
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={currentRoom.id}
+                src={currentRoom.image}
+                alt={currentRoom.name}
+                initial={{ opacity: 0, scale: 1.03 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="w-full h-full object-cover brightness-95"
+                referrerPolicy="no-referrer"
+              />
+            </AnimatePresence>
 
             {/* Scrim */}
             <div className="absolute inset-0 bg-black/10 pointer-events-none" />
@@ -154,51 +162,61 @@ export const WallInspiration: React.FC = () => {
                   className="absolute -translate-x-1/2 -translate-y-1/2 z-30"
                 >
                   {/* Glowing Hotspot Button */}
-                  <button
+                  <motion.button
                     type="button"
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setActiveHotspotId(isActive ? null : spot.id)}
                     className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer shadow-xl ${
                       isActive
                         ? 'bg-amber-500 text-stone-950 scale-125 ring-4 ring-amber-400/40'
-                        : 'bg-stone-950/80 text-white hover:bg-stone-950 hover:scale-110'
+                        : 'bg-stone-950/80 text-white hover:bg-stone-950'
                     }`}
                     aria-label={`View ${spot.productName}`}
                   >
                     {isActive ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     <span className="absolute -inset-1 rounded-full border border-white/60 animate-ping pointer-events-none opacity-50" />
-                  </button>
+                  </motion.button>
 
                   {/* Hotspot Floating Tooltip */}
-                  {isActive && (
-                    <div className="absolute top-10 left-1/2 -translate-x-1/2 w-64 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-stone-200 p-3 z-40 animate-in fade-in duration-200">
-                      <div className="flex gap-3 items-center">
-                        <img
-                          src={spot.thumbnail}
-                          alt={spot.productName}
-                          className="w-12 h-16 object-cover rounded shadow-sm shrink-0 border border-stone-200"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-serif text-xs font-semibold text-stone-950 truncate">
-                            {spot.productName}
-                          </h4>
-                          <p className="text-[11px] text-stone-500 truncate">{spot.frameName}</p>
-                          <div className="text-xs font-bold text-stone-900 mt-0.5">
-                            From ${spot.price}
+                  <AnimatePresence>
+                    {isActive && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.9 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                        className="absolute top-10 left-1/2 -translate-x-1/2 w-64 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-stone-200 p-3 z-40"
+                      >
+                        <div className="flex gap-3 items-center">
+                          <img
+                            src={spot.thumbnail}
+                            alt={spot.productName}
+                            className="w-12 h-16 object-cover rounded shadow-sm shrink-0 border border-stone-200"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-serif text-xs font-semibold text-stone-950 truncate">
+                              {spot.productName}
+                            </h4>
+                            <p className="text-[11px] text-stone-500 truncate">{spot.frameName}</p>
+                            <div className="text-xs font-bold text-stone-900 mt-0.5">
+                              From ${spot.price}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleNavigateToProduct(spot.productId)}
-                        className="mt-2.5 w-full py-1.5 px-3 bg-stone-900 hover:bg-stone-800 text-white text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <span>View Print & Customize</span>
-                        <ArrowRight className="w-3 h-3 text-amber-400" />
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          type="button"
+                          onClick={() => handleNavigateToProduct(spot.productId)}
+                          className="mt-2.5 w-full py-1.5 px-3 bg-stone-900 hover:bg-stone-800 text-white text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <span>View Print & Customize</span>
+                          <ArrowRight className="w-3 h-3 text-amber-400" />
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}

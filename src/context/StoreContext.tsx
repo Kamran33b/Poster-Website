@@ -50,9 +50,11 @@ interface StoreContextType {
   // User & Account
   user: UserAccount | null;
   savedAddresses: ShippingAddress[];
-  loginUser: (email: string, name?: string) => void;
-  logoutUser: () => void;
-  updateUserProfile: (profile: Partial<UserAccount>) => void;
+  loginUser: (email: string, password?: string, name?: string) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (data: { name: string; email: string; password: string; confirmPassword?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
+  logoutUser: () => Promise<void>;
+  updateUserProfile: (profile: Partial<UserAccount>) => Promise<void>;
+  checkAuthSession: () => Promise<void>;
   addAddress: (address: ShippingAddress) => void;
   saveAddress: (address: ShippingAddress) => void;
   updateAddress: (address: ShippingAddress) => void;
@@ -208,18 +210,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   });
 
-  // User
+  // User (Restored from server session, fallback to null)
   const [user, setUser] = useState<UserAccount | null>(() => {
     try {
       const saved = localStorage.getItem('lumina_user');
-      return saved ? JSON.parse(saved) : {
-        id: 'usr-default',
-        name: 'Sarah Jenkins',
-        email: 'sarah.jenkins@example.com',
-        phone: '+1 (555) 234-5678',
-        addresses: DEFAULT_SAVED_ADDRESSES,
-        wishlist: ['prod-01', 'prod-03']
-      };
+      return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
@@ -237,6 +232,41 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return DEFAULT_SAVED_ADDRESSES;
     }
   });
+
+  // Check and sync authentication session with backend
+  const checkAuthSession = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+          try {
+            localStorage.setItem('lumina_user', JSON.stringify(data.user));
+          } catch {}
+          if (data.user.role === 'admin') {
+            setIsAdminAuthenticated(true);
+            try { sessionStorage.setItem('lumina_admin_authenticated', 'true'); } catch {}
+          }
+          if (data.user.addresses && data.user.addresses.length > 0) {
+            setSavedAddresses(data.user.addresses);
+          }
+          return;
+        }
+      }
+      // If server says not authenticated, clear user
+      setUser(null);
+      try {
+        localStorage.removeItem('lumina_user');
+      } catch {}
+    } catch (err) {
+      console.warn('Session verification check failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    checkAuthSession();
+  }, []);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -294,17 +324,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [theme]);
 
-  const openAdminPortal = () => {
-    if (sessionStorage.getItem('lumina_admin_authenticated') === 'true') {
+  const openAdminPortal = async () => {
+    if (user?.role === 'admin' || sessionStorage.getItem('lumina_admin_authenticated') === 'true') {
       setIsAdminAuthenticated(true);
       setCurrentView('admin');
-    } else {
-      setIsAdminAuthenticated(false);
-      setIsAdminAuthModalOpen(true);
+      return;
     }
+    try {
+      const res = await fetch('/api/admin/auth/status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isAdmin) {
+          setIsAdminAuthenticated(true);
+          try { sessionStorage.setItem('lumina_admin_authenticated', 'true'); } catch {}
+          setCurrentView('admin');
+          return;
+        }
+      }
+    } catch {}
+
+    setIsAdminAuthenticated(false);
+    setIsAdminAuthModalOpen(true);
   };
 
-  const logoutAdmin = () => {
+  const logoutAdmin = async () => {
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+    } catch {}
     try {
       sessionStorage.removeItem('lumina_admin_authenticated');
     } catch {}
@@ -636,42 +682,125 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const isInWishlist = (productId: string) => wishlist.includes(productId);
 
-  // User Operations
-  const loginUser = (email: string, name?: string) => {
-    const newUser: UserAccount = {
-      id: `usr-${Date.now()}`,
-      name: name || email.split('@')[0].replace('.', ' '),
-      email,
-      addresses: user?.addresses || [
-        {
-          fullName: name || 'Gallery Collector',
-          email,
-          phone: '+1 (555) 432-1098',
-          street: '450 North Art District Way',
-          city: 'Los Angeles',
-          state: 'CA',
-          zipCode: '90012',
-          country: 'United States',
-          isDefault: true
-        }
-      ],
-      wishlist
-    };
-    setUser(newUser);
-    showToast(`Welcome back, ${newUser.name}!`);
+  // User Operations (Connected to real database-backed API)
+  const loginUser = async (email: string, password?: string, name?: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.user) {
+        const errorMsg = data.error || 'Invalid email or password';
+        showToast(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      setUser(data.user);
+      try {
+        localStorage.setItem('lumina_user', JSON.stringify(data.user));
+      } catch {}
+
+      if (data.user.role === 'admin') {
+        setIsAdminAuthenticated(true);
+        try { sessionStorage.setItem('lumina_admin_authenticated', 'true'); } catch {}
+      }
+      if (data.user.addresses && data.user.addresses.length > 0) {
+        setSavedAddresses(data.user.addresses);
+      }
+      showToast(`Welcome back, ${data.user.name}!`);
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || 'Login failed. Please check network connection.';
+      showToast(errorMsg);
+      return { success: false, error: errorMsg };
+    }
   };
 
-  const logoutUser = () => {
+  const registerUser = async (registrationData: {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword?: string;
+    phone?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registrationData)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.user) {
+        const errorMsg = data.error || 'Registration failed';
+        showToast(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      setUser(data.user);
+      try {
+        localStorage.setItem('lumina_user', JSON.stringify(data.user));
+      } catch {}
+
+      if (data.user.role === 'admin') {
+        setIsAdminAuthenticated(true);
+        try { sessionStorage.setItem('lumina_admin_authenticated', 'true'); } catch {}
+      }
+      if (data.user.addresses && data.user.addresses.length > 0) {
+        setSavedAddresses(data.user.addresses);
+      }
+      showToast(`Welcome to Lumina, ${data.user.name}!`);
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || 'Registration failed. Please try again.';
+      showToast(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  };
+
+  const logoutUser = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.warn('Logout request failed:', err);
+    }
     setUser(null);
-    localStorage.removeItem('lumina_user');
+    setIsAdminAuthenticated(false);
+    try {
+      sessionStorage.removeItem('lumina_admin_authenticated');
+      localStorage.removeItem('lumina_user');
+    } catch {}
     showToast('Signed out successfully');
   };
 
-  const updateUserProfile = (profile: Partial<UserAccount>) => {
+  const updateUserProfile = async (profile: Partial<UserAccount>) => {
     if (!user) return;
-    const updated = { ...user, ...profile };
-    setUser(updated);
-    showToast('Profile updated successfully');
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUser(data.user);
+          try {
+            localStorage.setItem('lumina_user', JSON.stringify(data.user));
+          } catch {}
+          showToast('Profile updated successfully');
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+    }
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...profile };
+      try { localStorage.setItem('lumina_user', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    showToast('Profile updated');
   };
 
   const addAddress = (address: ShippingAddress) => {
@@ -680,8 +809,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: address.id || `addr-${Date.now()}`
     };
 
+    let updatedList: ShippingAddress[] = [];
     setSavedAddresses((prev) => {
-      // If updating existing by id
       const existingIdx = prev.findIndex((a) => a.id && a.id === newAddr.id);
       let nextList = [...prev];
       if (existingIdx >= 0) {
@@ -694,6 +823,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           ? [newAddr, ...prev.map((a) => ({ ...a, isDefault: false }))]
           : [...prev, newAddr];
       }
+      updatedList = nextList;
       return nextList;
     });
 
@@ -714,6 +844,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         ...user,
         addresses: nextAddresses
       });
+      // Sync with server profile
+      fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addresses: nextAddresses })
+      }).catch(() => {});
     }
     showToast(`Address "${newAddr.label || newAddr.street}" updated`);
   };
@@ -734,10 +870,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     setSavedAddresses((prev) => prev.filter(filterFn));
     if (user) {
+      const nextAddresses = user.addresses.filter(filterFn);
       setUser({
         ...user,
-        addresses: user.addresses.filter(filterFn)
+        addresses: nextAddresses
       });
+      fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addresses: nextAddresses })
+      }).catch(() => {});
     }
     showToast('Address removed');
   };
@@ -750,10 +892,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     setSavedAddresses((prev) => prev.map(updateFn));
     if (user) {
+      const nextAddresses = user.addresses.map(updateFn);
       setUser({
         ...user,
-        addresses: user.addresses.map(updateFn)
+        addresses: nextAddresses
       });
+      fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addresses: nextAddresses })
+      }).catch(() => {});
     }
     showToast('Default delivery address updated');
   };
@@ -1006,8 +1154,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         user,
         savedAddresses,
         loginUser,
+        registerUser,
         logoutUser,
         updateUserProfile,
+        checkAuthSession,
         addAddress,
         saveAddress,
         updateAddress,

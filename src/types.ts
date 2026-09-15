@@ -159,10 +159,14 @@ export interface UserAccount {
   id: string;
   name: string;
   email: string;
+  role: 'customer' | 'admin';
+  passwordHash?: string;
   phone?: string;
   avatar?: string;
   addresses: ShippingAddress[];
   wishlist: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AdminStats {

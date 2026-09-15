@@ -66,6 +66,18 @@ export const ProductDetailPage: React.FC = () => {
   });
   const [quantity, setQuantity] = useState(1);
   const [isRoomView, setIsRoomView] = useState(false);
+  const [isMagnifying, setIsMagnifying] = useState(false);
+  const [magnifierPos, setMagnifierPos] = useState({ x: 0, y: 0, bgX: 0, bgY: 0 });
+
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const elem = e.currentTarget;
+    const { left, top, width, height } = elem.getBoundingClientRect();
+    const x = e.clientX - left;
+    const y = e.clientY - top;
+    const bgX = (x / width) * 100;
+    const bgY = (y / height) * 100;
+    setMagnifierPos({ x, y, bgX, bgY });
+  };
 
   // Review Form state
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -260,14 +272,23 @@ export const ProductDetailPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                /* Studio Archival Poster with Real-time Frame Border Simulation */
+                /* Studio Archival Poster with Real-time Frame Border Simulation & Loupe Magnifier */
                 <div className="relative max-w-sm sm:max-w-md w-full transition-all duration-300">
-                  <div
+                  <motion.div
+                    key={selectedFrame.id + selectedSize.id}
+                    initial={{ scale: 0.97, opacity: 0.9 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                     className={`bg-white transition-all duration-300 ${getFrameCssBorder(selectedFrame)}`}
                   >
                     {/* White Matting Border */}
                     <div className="bg-[#fcfbf9] p-3 sm:p-4">
-                      <div className="aspect-[3/4] overflow-hidden bg-stone-100 shadow-sm relative">
+                      <div
+                        className="aspect-[3/4] overflow-hidden bg-stone-100 shadow-sm relative cursor-crosshair group/loupe"
+                        onMouseEnter={() => setIsMagnifying(true)}
+                        onMouseLeave={() => setIsMagnifying(false)}
+                        onMouseMove={handleImageMouseMove}
+                      >
                         <img
                           src={product.images[selectedImageIdx] || product.images[0]}
                           alt={product.name}
@@ -276,14 +297,39 @@ export const ProductDetailPage: React.FC = () => {
                         />
                         {/* Soft light wash */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
+
+                        {/* Interactive Loupe Magnifier Circle */}
+                        {isMagnifying && (
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            className="absolute w-36 h-36 rounded-full border-2 border-white/90 shadow-[0_10px_30px_rgba(0,0,0,0.35)] pointer-events-none z-20 overflow-hidden"
+                            style={{
+                              left: `${magnifierPos.x - 72}px`,
+                              top: `${magnifierPos.y - 72}px`,
+                              backgroundImage: `url(${product.images[selectedImageIdx] || product.images[0]})`,
+                              backgroundSize: '300%',
+                              backgroundPosition: `${magnifierPos.bgX}% ${magnifierPos.bgY}%`,
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent pointer-events-none" />
+                            <div className="absolute bottom-1 right-2 text-[9px] font-mono text-white/90 bg-black/40 px-1 rounded backdrop-blur-xs">
+                              2.5x Archival Zoom
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Dimension tag overlay */}
-                  <div className="text-center mt-3">
-                    <span className="text-xs text-stone-500 font-mono">
-                      Selected Size: {selectedSize.dimensions}
+                  <div className="text-center mt-3 flex items-center justify-center gap-2">
+                    <span className="text-xs text-stone-500 font-mono bg-white/80 px-2.5 py-1 rounded-full border border-stone-200 shadow-2xs">
+                      Dimensions: {selectedSize.dimensions}
+                    </span>
+                    <span className="text-[11px] text-amber-800 font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/80">
+                      Hover image to zoom details
                     </span>
                   </div>
                 </div>

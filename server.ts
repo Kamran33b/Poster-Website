@@ -1,12 +1,105 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import { db } from './server/db';
+import { db, getPublicUser, hashPassword, comparePassword } from './server/db';
+import { UserAccount } from './src/types';
+
+interface SessionRecord {
+  userId: string;
+  role: 'customer' | 'admin';
+  email: string;
+  createdAt: number;
+  expiresAt: number;
+}
+const sessions = new Map<string, SessionRecord>();
+
+const SESSION_COOKIE_NAME = 'lumina_session';
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function createSession(user: UserAccount): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, {
+    userId: user.id,
+    role: user.role,
+    email: user.email,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + SESSION_MAX_AGE
+  });
+  return token;
+}
+
+function getSessionUser(req: express.Request): UserAccount | null {
+  let token = req.cookies?.[SESSION_COOKIE_NAME];
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.substring(7).trim();
+  }
+  if (!token) return null;
+
+  const session = sessions.get(token);
+  if (!session) return null;
+
+  if (Date.now() > session.expiresAt) {
+    sessions.delete(token);
+    return null;
+  }
+
+  const user = db.getUserById(session.userId);
+  if (!user) {
+    sessions.delete(token);
+    return null;
+  }
+
+  return user;
+}
+
+function setSessionCookie(res: express.Response, token: string) {
+  res.cookie(SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: SESSION_MAX_AGE,
+    path: '/'
+  });
+}
+
+function clearSessionCookie(res: express.Response) {
+  res.clearCookie(SESSION_COOKIE_NAME, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/'
+  });
+}
+
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const user = getSessionUser(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required. Please sign in.' });
+  }
+  (req as any).user = user;
+  next();
+}
+
+function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const user = getSessionUser(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Admin authentication required.' });
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ error: 'Access denied: Administrator privileges required.' });
+  }
+  (req as any).user = user;
+  next();
+}
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Cookie Parser Middleware
+  app.use(cookieParser('lumina-poster-art-session-secret'));
 
   // JSON Body parsing with larger limit for base64 image uploads
   app.use(express.json({ limit: '10mb' }));
@@ -305,35 +398,279 @@ async function startServer() {
     res.json(updated);
   });
 
-  // Admin Stats
+  // ==========================================
+  // AUTHENTICATION & USER SESSIONS (EMAIL + PASSWORD)
+  // ==========================================
+
+  // Customer Registration
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { name, email, password, confirmPassword, phone } = req.body;
+
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ error: 'Full name is required.' });
+      }
+      if (!email || typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({ error: 'Email address is required.' });
+      }
+      const trimmedEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+
+      if (!password || typeof password !== 'string') {
+        return res.status(400).json({ error: 'Password is required.' });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+      }
+
+      if (confirmPassword !== undefined && password !== confirmPassword) {
+        return res.status(400).json({ error: 'Passwords do not match.' });
+      }
+
+      // Check if user already exists in database
+      const existing = db.getUserByEmail(trimmedEmail);
+      if (existing) {
+        return res.status(409).json({ error: 'An account with this email address already exists. Please log in.' });
+      }
+
+      // Hash password using bcryptjs
+      const passwordHash = await hashPassword(password);
+
+      // Create new customer account in real database
+      const newUser = db.createUser({
+        name: name.trim(),
+        email: trimmedEmail,
+        passwordHash,
+        role: 'customer',
+        phone: phone ? String(phone).trim() : ''
+      });
+
+      // Issue session token and secure HttpOnly cookie
+      const token = createSession(newUser);
+      setSessionCookie(res, token);
+
+      return res.status(201).json({
+        success: true,
+        user: getPublicUser(newUser),
+        token
+      });
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      return res.status(500).json({ error: 'An error occurred during registration. Please try again.' });
+    }
+  });
+
+  // Customer / User Login
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required.' });
+      }
+
+      const trimmedEmail = String(email).trim().toLowerCase();
+      const user = await db.verifyUserCredentials(trimmedEmail, String(password));
+
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid email or password.' });
+      }
+
+      // Create session and set cookie
+      const token = createSession(user);
+      setSessionCookie(res, token);
+
+      return res.json({
+        success: true,
+        user: getPublicUser(user),
+        token
+      });
+    } catch (err: any) {
+      console.error('Login error:', err);
+      return res.status(500).json({ error: 'An unexpected error occurred during login.' });
+    }
+  });
+
+  // Session Verification (Restore state on page reload)
+  app.get('/api/auth/me', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) {
+      return res.status(401).json({ authenticated: false, user: null });
+    }
+    return res.json({
+      authenticated: true,
+      user: getPublicUser(user)
+    });
+  });
+
+  // Logout (Invalidate session on server & clear cookie)
+  app.post('/api/auth/logout', (req, res) => {
+    let token = req.cookies?.[SESSION_COOKIE_NAME];
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.substring(7).trim();
+    }
+    if (token) {
+      sessions.delete(token);
+    }
+    clearSessionCookie(res);
+    return res.json({ success: true, message: 'Logged out successfully.' });
+  });
+
+  // Update Profile & Addresses
+  app.put('/api/auth/profile', requireAuth, async (req, res) => {
+    try {
+      const currentUser = (req as any).user as UserAccount;
+      const { name, phone, addresses, wishlist, currentPassword, newPassword } = req.body;
+
+      const updates: Partial<UserAccount> = {};
+      if (name && typeof name === 'string' && name.trim()) {
+        updates.name = name.trim();
+      }
+      if (phone !== undefined) {
+        updates.phone = String(phone).trim();
+      }
+      if (Array.isArray(addresses)) {
+        updates.addresses = addresses;
+      }
+      if (Array.isArray(wishlist)) {
+        updates.wishlist = wishlist;
+      }
+
+      // If user wants to change their password
+      if (newPassword) {
+        if (!currentPassword) {
+          return res.status(400).json({ error: 'Current password is required to change password.' });
+        }
+        const isMatch = await comparePassword(currentPassword, currentUser.passwordHash || '');
+        if (!isMatch) {
+          return res.status(400).json({ error: 'Current password is incorrect.' });
+        }
+        if (newPassword.length < 6) {
+          return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+        }
+        updates.passwordHash = await hashPassword(newPassword);
+      }
+
+      const updatedUser = db.updateUser(currentUser.id, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'User account not found.' });
+      }
+
+      return res.json({
+        success: true,
+        user: getPublicUser(updatedUser)
+      });
+    } catch (err: any) {
+      console.error('Profile update error:', err);
+      return res.status(500).json({ error: 'Failed to update profile.' });
+    }
+  });
+
+  // ==========================================
+  // ADMIN PORTAL AUTHENTICATION & OPERATIONS
+  // ==========================================
+
+  // Admin Stats (Requires Admin privileges)
   app.get('/api/admin/stats', (req, res) => {
+    const user = getSessionUser(req);
+    if (user && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Administrator privileges required.' });
+    }
+    if (!user) {
+      return res.status(401).json({ error: 'Admin authentication required.' });
+    }
     res.json(db.getAdminStats());
   });
 
-  // Admin Portal Security & Authentication
+  // Admin Login (Email + Password)
+  app.post('/api/admin/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required.' });
+      }
+
+      const trimmedEmail = String(email).trim().toLowerCase();
+      const user = await db.verifyUserCredentials(trimmedEmail, String(password));
+
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid admin credentials.' });
+      }
+
+      if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied: This account does not have administrator privileges.' });
+      }
+
+      const token = createSession(user);
+      setSessionCookie(res, token);
+
+      return res.json({
+        success: true,
+        user: getPublicUser(user),
+        token
+      });
+    } catch (err: any) {
+      console.error('Admin login error:', err);
+      return res.status(500).json({ error: 'Admin authentication failed.' });
+    }
+  });
+
+  // Admin Auth Verify (Supports existing callers and password check)
+  app.post('/api/admin/auth/verify', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      // 1. If existing session is already an admin
+      const sessionUser = getSessionUser(req);
+      if (sessionUser && sessionUser.role === 'admin') {
+        return res.json({ success: true, message: 'Admin session active', user: getPublicUser(sessionUser) });
+      }
+
+      // 2. If email and password provided
+      if (email && password) {
+        const user = await db.verifyUserCredentials(String(email).trim().toLowerCase(), String(password));
+        if (!user || user.role !== 'admin') {
+          return res.status(401).json({ success: false, message: 'Invalid admin credentials or insufficient privileges.' });
+        }
+        const token = createSession(user);
+        setSessionCookie(res, token);
+        return res.json({ success: true, message: 'Admin authenticated', user: getPublicUser(user), token });
+      }
+
+      // 3. If only password provided
+      if (password) {
+        const adminUser = await db.verifyAdminCredentials(String(password));
+        if (!adminUser) {
+          return res.status(401).json({ success: false, message: 'Incorrect admin password.' });
+        }
+        const token = createSession(adminUser);
+        setSessionCookie(res, token);
+        return res.json({ success: true, message: 'Access granted', user: getPublicUser(adminUser), token });
+      }
+
+      return res.status(400).json({ success: false, message: 'Admin credentials required.' });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: 'Verification error' });
+    }
+  });
+
+  // Admin Auth Status
   app.get('/api/admin/auth/status', (req, res) => {
+    const user = getSessionUser(req);
     const auth = db.getAdminAuth();
-    // Return masked phone info so admin knows where OTP goes, but not plaintext password
     const maskedPhone = auth.recoveryPhone
       ? auth.recoveryPhone.replace(/(\d{3})\d+(\d{2})/, '$1***$2')
       : 'Registered phone';
     res.json({
       hasPassword: true,
       recoveryPhone: auth.recoveryPhone,
-      maskedPhone
+      maskedPhone,
+      isAdmin: user?.role === 'admin',
+      adminUser: user?.role === 'admin' ? getPublicUser(user) : null
     });
-  });
-
-  app.post('/api/admin/auth/verify', (req, res) => {
-    const { password } = req.body;
-    if (!password) {
-      return res.status(400).json({ success: false, message: 'Password is required' });
-    }
-    const isValid = db.verifyAdminPassword(password);
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: 'Incorrect admin password' });
-    }
-    res.json({ success: true, message: 'Access granted' });
   });
 
   app.post('/api/admin/auth/send-otp', (req, res) => {
@@ -342,9 +679,6 @@ async function startServer() {
       return res.status(400).json({ success: false, message: 'Phone number is required' });
     }
     const result = db.generateOtpForPhone(phone);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
     res.json(result);
   });
 
@@ -355,7 +689,7 @@ async function startServer() {
     }
     const isValid = db.verifyAndConsumeOtp(phone, otp);
     if (!isValid) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired WhatsApp OTP code' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code' });
     }
     res.json({ success: true, message: 'OTP verified successfully! Access granted.' });
   });
@@ -372,13 +706,54 @@ async function startServer() {
     res.json(result);
   });
 
-  app.post('/api/admin/auth/update-phone', (req, res) => {
+  app.post('/api/admin/auth/update-phone', requireAdmin, (req, res) => {
     const { phone } = req.body;
     if (!phone || phone.trim().length < 6) {
       return res.status(400).json({ success: false, message: 'Valid phone number required' });
     }
     db.setAdminRecoveryPhone(phone);
     res.json({ success: true, message: 'Recovery phone updated successfully' });
+  });
+
+  // Admin Logout
+  app.post('/api/admin/auth/logout', (req, res) => {
+    const token = req.cookies?.[SESSION_COOKIE_NAME];
+    if (token) {
+      sessions.delete(token);
+    }
+    clearSessionCookie(res);
+    res.json({ success: true, message: 'Admin signed out successfully.' });
+  });
+
+  // Admin Users Management (Protected: requires admin role)
+  app.get('/api/admin/users', requireAdmin, (req, res) => {
+    const users = db.getUsers().map(getPublicUser);
+    res.json(users);
+  });
+
+  app.patch('/api/admin/users/:id/role', requireAdmin, (req, res) => {
+    const { role } = req.body;
+    if (role !== 'customer' && role !== 'admin') {
+      return res.status(400).json({ error: 'Invalid role specified.' });
+    }
+    const updated = db.updateUser(req.params.id, { role });
+    if (!updated) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json({ success: true, user: getPublicUser(updated) });
+  });
+
+  app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+    const target = db.getUserById(req.params.id);
+    if (!target) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    const currentAdmin = (req as any).user as UserAccount;
+    if (target.id === currentAdmin.id) {
+      return res.status(400).json({ error: 'You cannot delete your own admin account.' });
+    }
+    db.deleteUser(req.params.id);
+    res.json({ success: true });
   });
 
   // Simulated payment gateway verification endpoint (Cards, UPI, Apple Pay, PayPal)
