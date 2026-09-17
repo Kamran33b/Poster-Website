@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
@@ -116,6 +117,17 @@ async function startServer() {
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Documentation Download API
+  app.get('/api/documentation/download', (req, res) => {
+    const docPath = path.join(process.cwd(), 'DOCUMENTATION.md');
+    if (fs.existsSync(docPath)) {
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="DOCUMENTATION.md"');
+      return res.sendFile(docPath);
+    }
+    return res.status(404).json({ error: 'DOCUMENTATION.md file not found' });
   });
 
   // Real-Time Server-Sent Events (SSE)

@@ -19,7 +19,10 @@ import {
   Zap,
   Globe,
   Database,
-  Smartphone
+  Smartphone,
+  BookOpen,
+  FileText,
+  Download
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
@@ -30,7 +33,7 @@ interface DeveloperModalProps {
 
 export const DeveloperModal: React.FC<DeveloperModalProps> = ({ isOpen, onClose }) => {
   const { products, categories, realtimeStatus, settings } = useStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'tech' | 'telemetry'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tech' | 'telemetry' | 'docs'>('profile');
   const [copiedEmail, setCopiedEmail] = useState(false);
   
   // Health check state
@@ -144,11 +147,12 @@ export const DeveloperModal: React.FC<DeveloperModalProps> = ({ isOpen, onClose 
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-stone-200 bg-stone-50/80 px-5 pt-3 gap-2">
+          <div className="flex border-b border-stone-200 bg-stone-50/80 px-5 pt-3 gap-2 overflow-x-auto scrollbar-none">
             {[
               { id: 'profile', label: 'Developer Profile', icon: User },
               { id: 'tech', label: 'Tech Stack & Architecture', icon: Layers },
               { id: 'telemetry', label: 'Live Telemetry & Diagnostics', icon: Activity },
+              { id: 'docs', label: 'System Documentation', icon: BookOpen },
             ].map((tab) => {
               const Icon = tab.icon;
               const isSelected = activeTab === tab.id;
@@ -433,6 +437,105 @@ export const DeveloperModal: React.FC<DeveloperModalProps> = ({ isOpen, onClose 
                     <div className="p-2 bg-stone-50 rounded-lg border border-stone-100">
                       <span className="text-[10px] text-stone-400 block">Active Exchange Rate</span>
                       <span className="font-bold text-stone-900 text-sm">{settings.currencyRate || 83.5}x</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: SYSTEM DOCUMENTATION & API GUIDE */}
+            {activeTab === 'docs' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+                        Lumina Posters Platform Manual
+                      </h4>
+                      <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                        Complete specifications for store architecture, API routes, database schemas, framing math, and authentication policies. Full file available at <code className="bg-white/80 px-1.5 py-0.5 rounded text-amber-900 font-mono text-[11px] font-bold border border-amber-200">/DOCUMENTATION.md</code>.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href="/api/documentation/download"
+                    download="DOCUMENTATION.md"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-xs transition-colors shrink-0"
+                  >
+                    <Download className="w-4 h-4 text-amber-400" />
+                    <span>Download DOCUMENTATION.md</span>
+                  </a>
+                </div>
+
+                {/* API Endpoints Reference */}
+                <div className="p-4 rounded-xl border border-stone-200 bg-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-stone-900 uppercase tracking-wider flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-amber-600" />
+                      Core REST API Endpoints
+                    </span>
+                    <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      Full-Stack Express
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs font-mono">
+                    <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold">GET</span>
+                        <span className="text-stone-900 font-bold">/api/health</span>
+                      </div>
+                      <span className="text-[11px] text-stone-500 font-sans">System health & uptime</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold">GET</span>
+                        <span className="text-stone-900 font-bold">/api/products</span>
+                      </div>
+                      <span className="text-[11px] text-stone-500 font-sans">Fetch active artwork catalog</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-amber-600 text-white rounded text-[10px] font-bold">POST</span>
+                        <span className="text-stone-900 font-bold">/api/orders</span>
+                      </div>
+                      <span className="text-[11px] text-stone-500 font-sans">Submit new customer checkout</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold">POST</span>
+                        <span className="text-stone-900 font-bold">/api/admin/auth</span>
+                      </div>
+                      <span className="text-[11px] text-stone-500 font-sans">Admin password & OTP login</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-purple-600 text-white rounded text-[10px] font-bold">POST</span>
+                        <span className="text-stone-900 font-bold">/api/chat</span>
+                      </div>
+                      <span className="text-[11px] text-stone-500 font-sans">AI support query handling</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Framing Engine Specifications */}
+                <div className="p-4 rounded-xl border border-stone-200 bg-white space-y-2">
+                  <div className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+                    Custom Framing Engine Specifications
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-stone-600">
+                    <div className="p-2.5 bg-stone-50 rounded-lg border border-stone-100 space-y-1">
+                      <div className="font-bold text-stone-900">Natural Solid Oak</div>
+                      <p className="text-[11px] text-stone-500">Milled European timber with clear matte protective lacquer.</p>
+                    </div>
+                    <div className="p-2.5 bg-stone-50 rounded-lg border border-stone-100 space-y-1">
+                      <div className="font-bold text-stone-900">Anodized Black Aluminum</div>
+                      <p className="text-[11px] text-stone-500">Satin architectural profile with acrylic glass protection.</p>
                     </div>
                   </div>
                 </div>
